@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+message Settings {
+    uint32 horizontal = 1;
+    uint32 vertical = 2;
+    uint32 bitrate = 3; // in kbps
+    float fps = 4;
+    float fov = 5;
+
+    bool mic = 6;
+    float smoothness = 7;
+}
+
+message VideoFrame {
+    bytes data = 1;
+}
+
+message AudioFrame {
+    uint32 channels = 1;
+    uint32 sampleRate = 2;
+    repeated float data = 3;
+}
+
+message PacketWrapper {
+    oneof Packet {
+        Settings settings = 1;
+        VideoFrame videoFrame = 2;
+        AudioFrame audioFrame = 3;
+    }
+}

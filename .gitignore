@@ -1,0 +1,26 @@
+# VSCode clangd
+.cache
+
+# Jetbrains IDEs
+.idea/
+
+# NDK stuff
+ndkpath.txt
+*.zip
+*.txt
+*.log
+
+# VCPKG stuff
+vcpkg_installed/
+protos_cpp/
+
+# QPM stuff
+extern/
+qpm_defines.cmake
+extern.cmake
+
+# build stuff
+mod.json
+mod.json.schema
+build/
+*.qmod
