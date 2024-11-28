@@ -135,7 +135,16 @@ export function OptionsMenu() {
     hasSettings,
   } = useOptions();
 
-  // todo: width/height -> resolution
+  createEffect(() => {
+    const currW = width();
+    const currH = height();
+    for (const [str, [w, h]] of Object.entries(resolutions)) {
+      if (currW === w && currH === h) {
+        setResolution(str);
+        break;
+      }
+    }
+  });
 
   createEffect(() => {
     const str = resolution();

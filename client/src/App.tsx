@@ -1,4 +1,4 @@
-import { createEffect, onMount } from "solid-js";
+import { Show, createEffect, createSignal, onMount } from "solid-js";
 import { Button } from "./components/ui/button";
 import "./App.css";
 import {
@@ -6,7 +6,7 @@ import {
   ColorModeScript,
   createLocalStorageManager,
 } from "@kobalte/core";
-import { createPersistentSignal } from "./lib/utils";
+import { Uint8ArrayList, createPersistentSignal } from "./lib/utils";
 import {
   Popover,
   PopoverContent,
@@ -17,6 +17,9 @@ import { Input } from "./ui";
 import { OptionsMenu, OptionsProvider, useOptions } from "./Options";
 import { SocketProvider, useSocket } from "./Socket";
 import { RingBuffer } from "./lib/ringbuf";
+import AudioWorkletBuild from "./lib/audio_worklet?worker&url";
+import AudioWorkletDev from "./lib/audio_worklet?url";
+import DecoderWorker from "./lib/decoder_worker?worker";
 
 class WebAudioController {
   async config(sampleRate: number, channels: number) {
@@ -24,75 +27,136 @@ class WebAudioController {
 
     console.log("audio initialize", sampleRate, channels);
 
-    this.sampleRate = sampleRate;
-    this.channels = channels;
-
-    // Set up AudioContext to house graph of AudioNodes and control rendering.
+    // set up the context - requires user to have interacted
     this.audioContext = new AudioContext({
       sampleRate: sampleRate,
       latencyHint: "interactive",
     });
     this.audioContext.suspend();
 
-    // Make script modules available for execution by AudioWorklet.
+    this.sampleRate = sampleRate;
+    this.channels = channels;
+
+    // register the worklet
+    // https://github.com/vitejs/vite/issues/6979
     await this.audioContext.audioWorklet.addModule(
-      new URL("lib/audio_worklet.ts", import.meta.url)
+      import.meta.env.PROD ? AudioWorkletBuild : AudioWorkletDev
     );
 
     // discard data after 0.2 seconds
     const storage = RingBuffer.getStorageForCapacity(
-      sampleRate * channels * 0.2,
+      sampleRate * channels * 0.5,
       Float32Array
     );
     this.buffer = new RingBuffer(storage, Float32Array);
 
-    // Get an instance of the AudioSink worklet, passing it the memory for a
-    // ringbuffer, connect it to a GainNode for volume. This GainNode is in
-    // turn connected to the destination.
-    this.audioSink = new AudioWorkletNode(this.audioContext, "audio_worklet", {
+    // "audio_worklet" is the name given to registerProcessor in lib/audio_worklet.ts
+    const audioSink = new AudioWorkletNode(this.audioContext, "audio_worklet", {
       processorOptions: {
         buffer: storage,
       },
       outputChannelCount: [channels],
     });
-    this.audioSink.connect(this.audioContext.destination);
-    return this.audioContext.resume();
+    audioSink.connect(this.audioContext.destination);
+    return this.play();
   }
 
   queue(data: Float32Array) {
     this.buffer?.push(data);
   }
 
+  report() {
+    const latency =
+      this.audioContext!.baseLatency +
+      this.audioContext!.outputLatency +
+      this.buffer!.available_read() / (this.sampleRate! * this.channels!);
+    this.reportLatency?.(latency);
+    this.reporting = setTimeout(this.report.bind(this), 500);
+  }
+
   async play() {
-    return this.audioContext.resume();
+    await this.audioContext?.resume();
+    this.report();
   }
 
   async pause() {
-    return this.audioContext.suspend();
+    clearTimeout(this.reporting);
+    return this.audioContext?.suspend();
   }
 
   sampleRate?: number;
   channels?: number;
 
-  audioContext!: AudioContext;
-  audioSink!: AudioWorkletNode;
+  audioContext?: AudioContext;
   buffer?: RingBuffer;
+
+  reportLatency?: (val: number) => void;
+  reporting?: NodeJS.Timeout;
 }
 
+function VideoDownload() {
+  const { ON_MESSAGE, ON_DISCONNECT } = useSocket();
+
+  const file = new Uint8ArrayList();
+
+  let link: HTMLAnchorElement | undefined;
+
+  ON_MESSAGE.addListener((packet) => {
+    if (packet.$case === "videoFrame") {
+      const { data } = packet.value;
+      if (data[4] === 103) file.clear();
+      file.add(data);
+    }
+  });
+
+  ON_DISCONNECT.addListener(() => {
+    file.clear();
+  });
+
+  const click = () => {
+    if (!link) return;
+    const blob = new Blob([file.get()]);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.click();
+    // wait 30s to be safe, this is for testing anyway
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  return (
+    <Button onClick={click}>
+      Download
+      <a ref={link} download="video.h264" class="hidden" />
+    </Button>
+  );
+}
+
+const ENABLE_DOWNLOAD_TEST = false;
+
 function Stream() {
-  const { width, height } = useOptions();
+  const { width, height, fps } = useOptions();
   const { ON_MESSAGE, ON_CONNECT, ON_DISCONNECT } = useSocket();
 
-  const decoder = new Worker(new URL("lib/decoder_worker.ts", import.meta.url));
+  const decoder = new DecoderWorker();
 
   let canvas: HTMLCanvasElement | undefined;
 
   const audioManager = new WebAudioController();
 
+  const [latency, setLatency] = createSignal(0);
+  audioManager.reportLatency = setLatency;
+
   createEffect(() => {
     decoder.postMessage({
-      type: "dimensions",
-      val: { width: width(), height: height() },
+      type: "latency",
+      val: latency(),
+    });
+  });
+
+  createEffect(() => {
+    decoder.postMessage({
+      type: "params",
+      val: { width: width(), height: height(), fps: fps() },
     });
   });
 
@@ -167,6 +231,29 @@ function ConnectMenu() {
   );
 }
 
+function MainPage() {
+  const { connection } = useSocket();
+
+  return (
+    <div id="app" class="flex gap-2 p-2">
+      <div class="grow">
+        <Show when={connection()}>
+          <Stream />
+        </Show>
+      </div>
+      <Show when={ENABLE_DOWNLOAD_TEST}>
+        <VideoDownload />
+      </Show>
+      <div class="flex flex-col gap-2">
+        <ConnectMenu />
+        <Show when={connection()}>
+          <OptionsMenu />
+        </Show>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const storageManager = createLocalStorageManager("vite-ui-theme");
 
@@ -179,16 +266,7 @@ function App() {
       <ColorModeProvider storageManager={storageManager}>
         <SocketProvider>
           <OptionsProvider>
-            <div id="app" class="flex gap-2 p-2">
-              <div class="grow">
-                {/* <Show when={connection()}>
-              <Stream width={width()} height={height()} />
-            </Show> */}
-                <Stream />
-              </div>
-              <OptionsMenu />
-              <ConnectMenu />
-            </div>
+            <MainPage />
           </OptionsProvider>
         </SocketProvider>
       </ColorModeProvider>

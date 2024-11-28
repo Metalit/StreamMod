@@ -1,6 +1,7 @@
 #include "mic.hpp"
 
 #include "UnityEngine/AudioClip.hpp"
+#include "UnityEngine/AudioRolloffMode.hpp"
 #include "UnityEngine/AudioSettings.hpp"
 #include "config.hpp"
 #include "main.hpp"
@@ -43,7 +44,8 @@ static float GetLoudness(ArrayW<float> data) {
     float sum = 0;
     for (int i = 0; i < data.size(); i++)
         sum += data[i] * data[i];
-    return sqrt(sum / data.size());
+    // call before ScaleData
+    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 50;
 }
 
 static void ScaleData(ArrayW<float> data) {
@@ -99,6 +101,7 @@ void MicCapture::Stop() {
     deviceId = -1;
 
     audioSource->Stop();
+    audioSource->clip = nullptr;
     Object::Destroy(audioClip);
     audioClip = nullptr;
 }
@@ -106,15 +109,13 @@ void MicCapture::Stop() {
 void MicCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
     channels = audioChannels;
     bool zeroed = false;
-    if (sampleRate != -1) {
-        ScaleData(data);
+    if (sampleRate != -1 && callback) {
         currentLoudness = GetLoudness(data);
-        if (!callback)
-            return;
         if (currentLoudness < getConfig().MicThreshold.GetValue()) {
             zeroed = true;
             std::fill(data.begin(), data.end(), 0);
-        }
+        } else
+            ScaleData(data);
         callback(data);
     }
     // make sure nothing is actually played
@@ -127,11 +128,12 @@ void MicCapture::OnDestroy() {
 }
 
 MicCapture* MicCapture::Create() {
-    if (auto go = UnityEngine::GameObject::Find("StreamingMicCapture"))
+    static ConstString name("StreamingMicCapture");
+    if (auto go = GameObject::Find(name))
         return go->GetComponent<MicCapture*>();
-    auto go = UnityEngine::GameObject::New_ctor("StreamingMicCapture");
-    UnityEngine::Object::DontDestroyOnLoad(go);
+    auto go = GameObject::New_ctor(name);
+    Object::DontDestroyOnLoad(go);
     auto ret = go->AddComponent<MicCapture*>();
-    ret->audioSource = go->AddComponent<UnityEngine::AudioSource*>();
+    ret->audioSource = go->AddComponent<AudioSource*>();
     return ret;
 }

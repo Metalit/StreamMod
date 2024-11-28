@@ -94,7 +94,10 @@ void Socket::Refresh(std::function<void(bool)> done) {
             connections.clear();
         }
 
-        BSML::MainThreadScheduler::ScheduleUntil([]() { return !threadRunning; }, [done]() { done(StartListen()); });
+        if (done)
+            BSML::MainThreadScheduler::ScheduleUntil([]() { return !threadRunning; }, [done]() { done(StartListen()); });
+        else
+            BSML::MainThreadScheduler::ScheduleUntil([]() { return !threadRunning; }, StartListen);
     } catch (std::exception const& exc) {
         logger.error("socket closing failed: {}", exc.what());
     }

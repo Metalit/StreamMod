@@ -38,6 +38,7 @@ static void DuckMix(std::vector<float>& base, std::vector<float>& add, bool duck
 }
 
 void AudioCapture::SetMicCapture(bool enabled) {
+    logger.debug("set mic {}", enabled);
     if (enabled) {
         if (!mic) {
             mic = MicCapture::Create();
@@ -115,4 +116,5 @@ void AudioCapture::OnDisable() {
 void AudioCapture::OnDestroy() {
     if (mic)
         mic->callback = nullptr;
+    mic = nullptr;
 }

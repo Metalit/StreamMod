@@ -10,8 +10,10 @@ const isChrome = /chrom(e|ium)/.test(navigator.userAgent.toLowerCase());
 const config: VideoDecoderConfig = {
   codec: "avc1.42000a",
   optimizeForLatency: true,
-  hardwareAcceleration: "prefer-software",
+  hardwareAcceleration: "prefer-hardware",
 };
+
+const isKey = (data: Uint8Array) => data[4] === 101 || data[4] === 103;
 
 const init: VideoDecoderInit = {
   output: (frame) => {
@@ -24,6 +26,35 @@ const init: VideoDecoderInit = {
   },
 };
 
+const frameBuffer: Uint8Array[] = [];
+
+let targetLatency = 0;
+let currentFps = 0;
+
+const atLatency = () => {
+  if (!decoder || frameBuffer.length === 0 || currentFps < 1) return false;
+  return (
+    (decoder.decodeQueueSize + frameBuffer.length) / currentFps >= targetLatency
+  );
+};
+
+const feed = () => {
+  if (!atLatency()) return;
+  // todo: skip to the next key frame if that frame is also behind the latency
+  const data = frameBuffer.shift()!;
+  const chunk = new EncodedVideoChunk({
+    data,
+    timestamp: 0,
+    type: isKey(data) ? "key" : "delta",
+  });
+  decoder!.decode(chunk);
+};
+
+const queue = (data: Uint8Array) => {
+  frameBuffer.push(data);
+  feed();
+};
+
 VideoDecoder.isConfigSupported(config).then((support) => {
   if (!support.supported) {
     console.error("config unsupported!", support);
@@ -31,55 +62,65 @@ VideoDecoder.isConfigSupported(config).then((support) => {
   }
   decoder = new VideoDecoder(init);
   decoder.configure(config);
+  decoder.ondequeue = feed;
 });
 
 self.onmessage = (event: MessageEvent) => {
   const data = event.data as
     | { type: "context"; val: OffscreenCanvas }
-    | { type: "dimensions"; val: { width: number; height: number } }
+    | { type: "params"; val: { width: number; height: number; fps: number } }
+    | { type: "latency"; val: number }
     | { type: "data"; val: Uint8Array };
 
-  if (data.type === "context") {
-    canvas = data.val;
-    canvasContext = canvas.getContext("2d")!;
-  } else if (data.type === "dimensions") {
-    if (canvas) {
-      canvas.width = data.val.width;
-      canvas.height = data.val.height;
+  switch (data.type) {
+    case "context":
+      canvas = data.val;
       canvasContext = canvas.getContext("2d")!;
-      // restart decoder
-      spsPacket = undefined;
-      wroteSps = false;
-      decoder?.reset();
-      decoder?.configure(config);
-    }
-  } else {
-    try {
-      if (decoder === undefined || decoderError) return;
-      let array = data.val;
-      if (array[0] !== 0 || array[1] !== 0 || array[2] !== 0 || array[3] !== 1)
-        console.warn("invalid header", array);
-      // firefox takes sps as a separate packet, chrome wants it stuck together with a keyframe
-      if (isChrome && array[4] === 103) {
-        spsPacket = new Uint8Array(array);
-        return;
+      break;
+    case "params":
+      currentFps = data.val.fps;
+      if (canvas) {
+        canvas.width = data.val.width;
+        canvas.height = data.val.height;
+        canvasContext = canvas.getContext("2d")!;
+        // clear queue
+        frameBuffer.length = 0;
+        // restart decoder
+        spsPacket = undefined;
+        wroteSps = false;
+        decoder?.reset();
+        decoder?.configure(config);
       }
-      if (decoder.decodeQueueSize < 5) {
+      break;
+    case "latency":
+      targetLatency = data.val;
+      break;
+    default:
+      try {
+        if (decoder === undefined || decoderError) return;
+        let array = data.val;
+        if (
+          array[0] !== 0 ||
+          array[1] !== 0 ||
+          array[2] !== 0 ||
+          array[3] !== 1
+        )
+          console.warn("invalid header", array);
+        // firefox takes sps as a separate packet, chrome wants it stuck together with a keyframe
+        if (isChrome && array[4] === 103) {
+          spsPacket = new Uint8Array(array);
+          return;
+        }
         if (spsPacket !== undefined && !wroteSps && array[4] === 101) {
           console.log("combining sps with normal packet");
           array = new Uint8Array([...spsPacket!, ...array]);
           wroteSps = true;
         }
         if (!wroteSps && array[4] !== 103) return;
-        const chunk = new EncodedVideoChunk({
-          data: array,
-          timestamp: 0,
-          type: array[4] === 101 || array[4] === 103 ? "key" : "delta",
-        });
-        decoder.decode(chunk);
-      } else console.log("skipping chunk!");
-    } catch (error) {
-      console.error("decoding error", error);
-    }
+        queue(array);
+      } catch (error) {
+        console.error("decoding error", error);
+      }
+      break;
   }
 };

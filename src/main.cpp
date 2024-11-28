@@ -4,6 +4,7 @@
 #include "UnityEngine/SpatialTracking/TrackedPoseDriver.hpp"
 #include "beatsaber-hook/shared/utils/hooking.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
+#include "bsml/shared/BSML.hpp"
 #include "config.hpp"
 #include "hollywood/shared/hollywood.hpp"
 #include "manager.hpp"
@@ -35,6 +36,13 @@ extern "C" void setup(CModInfo* info) {
 
     getConfig().Init(modInfo);
 
+    try {
+        std::stoi(getConfig().Port.GetValue());
+    } catch (...) {
+        logger.info("Resetting invalid port");
+        getConfig().Port.SetValue(getConfig().Port.GetDefaultValue());
+    }
+
     logger.info("Completed setup!");
 }
 
@@ -44,6 +52,9 @@ extern "C" void late_load() {
     Hollywood::Init();
 
     custom_types::Register::AutoRegister();
+
+    BSML::Register::RegisterSettingsMenu("Streamer", &Config::CreateMenu, false);
+    BSML::Events::onGameDidRestart.addCallback(&Config::Invalidate);
 
     INSTALL_HOOK(logger, MainCamera_Awake);
     INSTALL_HOOK(logger, TrackedPoseDriver_Update);

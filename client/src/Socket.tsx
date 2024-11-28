@@ -6,7 +6,6 @@ import {
   useContext,
 } from "solid-js";
 import { DeepPartial, Exact, PacketWrapper } from "~/proto/stream";
-import { createPersistentSignal } from "./lib/utils";
 
 export class EventListener<T> {
   private listeners: (((val: T) => void) | undefined)[] = [];
@@ -39,11 +38,7 @@ export class EventListener<T> {
 function makeSocketContext() {
   let socket: WebSocket | undefined;
 
-  const [autoConnect, setAutoConnect] = createPersistentSignal(
-    "connect.auto",
-    false,
-    (val) => val === "true"
-  );
+  const [autoConnect, setAutoConnect] = createSignal(false);
 
   const [currentIp, setCurrentIp] = createSignal<string>();
   const [currentPort, setCurrentPort] = createSignal<string>();

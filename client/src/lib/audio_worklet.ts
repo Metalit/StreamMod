@@ -5,8 +5,7 @@ class StreamFeedProcessor extends AudioWorkletProcessor {
     super();
     this.input = new RingBuffer(options.processorOptions.buffer, Float32Array);
     this.buffer = new Float32Array(this.input.capacity());
-    console.log(options);
-    console.log("processor initalized with buffer", this.input);
+    console.log("audio processor initalized");
   }
 
   input: RingBuffer;
@@ -21,6 +20,7 @@ class StreamFeedProcessor extends AudioWorkletProcessor {
       for (var j = 0; j < channels; j++) output[j][i] = this.buffer[inputIdx++];
     }
   }
+
   process(_: Float32Array[][], outputs: Float32Array[][]) {
     this.deinterleave(this.input, outputs[0]);
     return true;

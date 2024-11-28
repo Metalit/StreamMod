@@ -59,6 +59,7 @@ static void MakeCamera(UnityEngine::Camera* main) {
 
     cameraStream = camera->gameObject->AddComponent<Hollywood::CameraCapture*>();
     cameraStream->onOutputUnit = [](uint8_t* data, size_t length) {
+        static int frameIdx = 0;
         PacketWrapper packet;
         auto& video = *packet.mutable_videoframe();
         *video.mutable_data() = {(char*) data, length};
@@ -99,6 +100,7 @@ static void RefreshAudio() {
         return;
 
     logger.debug("refreshing audio capture");
+    audioStream->OnDestroy();
     UnityEngine::Object::DestroyImmediate(audioStream);
     audioStream = nullptr;
     auto listeners = UnityEngine::Resources::FindObjectsOfTypeAll<UnityEngine::AudioListener*>();
@@ -155,6 +157,7 @@ static void HandleSettings(Settings const& settings, void* source) {
     getConfig().Save();
     Manager::SendSettings(source);
     Manager::RestartCapture();
+    Config::UpdateMenu();
 }
 
 void Manager::HandleMessage(PacketWrapper const& packet, void* source) {
@@ -179,7 +182,6 @@ void Manager::SendSettings(void* source) {
     settings.set_mic(getConfig().Mic.GetValue());
     logger.debug("sending settings except to {}", source);
     Socket::Send(packet, source);
-    logger.debug("sent settings");
 }
 
 void Manager::RestartCapture() {
