@@ -12,7 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./components/ui/popover";
-import { ConnectionIcon } from "./components/ui/icons";
+import { ConnectionIcon, FullscreenIcon } from "./components/ui/icons";
 import { Input } from "./ui";
 import { OptionsMenu, OptionsProvider, useOptions } from "./Options";
 import { SocketProvider, useSocket } from "./Socket";
@@ -22,20 +22,34 @@ import AudioWorkletDev from "./lib/audio_worklet?url";
 import DecoderWorker from "./lib/decoder_worker?worker";
 
 class WebAudioController {
-  async config(sampleRate: number, channels: number) {
-    if (this.sampleRate === sampleRate && this.channels === channels) return;
+  async config(sampleRate: number, channels: number, bufferTime: number) {
+    const capacity = sampleRate * channels * bufferTime;
+
+    if (
+      this.sampleRate === sampleRate &&
+      this.channels === channels &&
+      this.buffer?.capacity() === capacity
+    )
+      return;
 
     console.log("audio initialize", sampleRate, channels);
+
+    this.sampleRate = sampleRate;
+    this.channels = channels;
+
+    if (!this.buffer || this.buffer.capacity() !== capacity) {
+      const storage = RingBuffer.getStorageForCapacity(capacity, Float32Array);
+      this.buffer = new RingBuffer(storage, Float32Array);
+    }
+
+    if (this.audioContext) await this.close();
 
     // set up the context - requires user to have interacted
     this.audioContext = new AudioContext({
       sampleRate: sampleRate,
       latencyHint: "interactive",
     });
-    this.audioContext.suspend();
-
-    this.sampleRate = sampleRate;
-    this.channels = channels;
+    await this.audioContext.suspend();
 
     // register the worklet
     // https://github.com/vitejs/vite/issues/6979
@@ -43,21 +57,14 @@ class WebAudioController {
       import.meta.env.PROD ? AudioWorkletBuild : AudioWorkletDev
     );
 
-    // discard data after 0.2 seconds
-    const storage = RingBuffer.getStorageForCapacity(
-      sampleRate * channels * 0.5,
-      Float32Array
-    );
-    this.buffer = new RingBuffer(storage, Float32Array);
-
     // "audio_worklet" is the name given to registerProcessor in lib/audio_worklet.ts
-    const audioSink = new AudioWorkletNode(this.audioContext, "audio_worklet", {
+    this.audioSink = new AudioWorkletNode(this.audioContext, "audio_worklet", {
       processorOptions: {
-        buffer: storage,
+        buffer: this.buffer.buf,
       },
       outputChannelCount: [channels],
     });
-    audioSink.connect(this.audioContext.destination);
+    this.audioSink.connect(this.audioContext.destination);
     return this.play();
   }
 
@@ -84,10 +91,22 @@ class WebAudioController {
     return this.audioContext?.suspend();
   }
 
+  async close() {
+    await this.pause();
+    this.audioSink?.disconnect();
+    await this.audioContext?.close();
+    this.audioSink = undefined;
+    this.audioContext = undefined;
+    this.sampleRate = undefined;
+    this.channels = undefined;
+    this.buffer?.clear();
+  }
+
   sampleRate?: number;
   channels?: number;
 
   audioContext?: AudioContext;
+  audioSink?: AudioWorkletNode;
   buffer?: RingBuffer;
 
   reportLatency?: (val: number) => void;
@@ -133,15 +152,14 @@ function VideoDownload() {
 
 const ENABLE_DOWNLOAD_TEST = false;
 
+const decoder = new DecoderWorker();
+const audioManager = new WebAudioController();
+
+let canvas: HTMLCanvasElement | undefined;
+
 function Stream() {
   const { width, height, fps } = useOptions();
-  const { ON_MESSAGE, ON_CONNECT, ON_DISCONNECT } = useSocket();
-
-  const decoder = new DecoderWorker();
-
-  let canvas: HTMLCanvasElement | undefined;
-
-  const audioManager = new WebAudioController();
+  const { ON_MESSAGE, ON_DISCONNECT } = useSocket();
 
   const [latency, setLatency] = createSignal(0);
   audioManager.reportLatency = setLatency;
@@ -165,17 +183,16 @@ function Stream() {
     decoder.postMessage({ type: "context", val: offscreen }, [offscreen]);
   });
 
-  ON_CONNECT.addListener(() => {});
-
   ON_DISCONNECT.addListener(() => {
-    audioManager.pause();
+    audioManager.close();
+    decoder.postMessage({ type: "flush" });
   });
 
   ON_MESSAGE.addListener((packet) => {
     if (packet.$case === "videoFrame")
       decoder.postMessage({ type: "data", val: packet.value.data });
     else if (packet.$case === "audioFrame") {
-      audioManager.config(packet.value.sampleRate, packet.value.channels);
+      audioManager.config(packet.value.sampleRate, packet.value.channels, 2);
       audioManager.queue(new Float32Array(packet.value.data));
     }
   });
@@ -248,6 +265,9 @@ function MainPage() {
         <ConnectMenu />
         <Show when={connection()}>
           <OptionsMenu />
+          <Button onClick={() => canvas?.requestFullscreen()} class="w-10 p-1">
+            <FullscreenIcon />
+          </Button>
         </Show>
       </div>
     </div>

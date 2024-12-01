@@ -65,11 +65,22 @@ VideoDecoder.isConfigSupported(config).then((support) => {
   decoder.ondequeue = feed;
 });
 
+const flush = () => {
+  // clear queue
+  frameBuffer.length = 0;
+  // restart decoder
+  spsPacket = undefined;
+  wroteSps = false;
+  decoder?.reset();
+  decoder?.configure(config);
+};
+
 self.onmessage = (event: MessageEvent) => {
   const data = event.data as
     | { type: "context"; val: OffscreenCanvas }
     | { type: "params"; val: { width: number; height: number; fps: number } }
     | { type: "latency"; val: number }
+    | { type: "flush" }
     | { type: "data"; val: Uint8Array };
 
   switch (data.type) {
@@ -83,17 +94,14 @@ self.onmessage = (event: MessageEvent) => {
         canvas.width = data.val.width;
         canvas.height = data.val.height;
         canvasContext = canvas.getContext("2d")!;
-        // clear queue
-        frameBuffer.length = 0;
-        // restart decoder
-        spsPacket = undefined;
-        wroteSps = false;
-        decoder?.reset();
-        decoder?.configure(config);
+        flush();
       }
       break;
     case "latency":
       targetLatency = data.val;
+      break;
+    case "flush":
+      flush();
       break;
     default:
       try {

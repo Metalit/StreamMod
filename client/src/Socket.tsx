@@ -2,6 +2,7 @@ import {
   batch,
   createContext,
   createSignal,
+  onCleanup,
   ParentProps,
   useContext,
 } from "solid-js";
@@ -10,15 +11,14 @@ import { DeepPartial, Exact, PacketWrapper } from "~/proto/stream";
 export class EventListener<T> {
   private listeners: (((val: T) => void) | undefined)[] = [];
 
-  addListener(callback: (val: T) => void, once = false) {
+  addListener(callback: (val: T) => void, cleanup = true, once = false) {
     if (once) {
-      const wrapper = (v: T) => {
-        callback(v);
-        this.removeListener(wrapper);
+      const original = callback;
+      callback = (v: T) => {
+        original(v);
+        this.removeListener(callback);
       };
-      this.listeners.push(wrapper);
-      return wrapper;
-    }
+    } else if (cleanup) onCleanup(this.removeListener.bind(this, callback));
     this.listeners.push(callback);
     return callback;
   }
@@ -63,12 +63,8 @@ function makeSocketContext() {
   };
 
   const disconnect = () => {
-    batch(() => {
-      setAutoConnect(false);
-      setCurrentIp(undefined);
-      setCurrentPort(undefined);
-      socket?.close();
-    });
+    setAutoConnect(false);
+    socket?.close();
   };
 
   const connection = () => {
@@ -106,6 +102,12 @@ function makeSocketContext() {
     console.log("socket disconnected", e);
     ON_DISCONNECT.invoke(!autoConnect());
     if (autoConnect()) connect(currentIp()!, currentPort()!);
+    else {
+      batch(() => {
+        setCurrentIp(undefined);
+        setCurrentPort(undefined);
+      });
+    }
   };
 
   const onMessage = (e: MessageEvent<ArrayBuffer>) => {

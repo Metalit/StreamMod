@@ -83,7 +83,10 @@ export class RingBuffer {
 
     if (wr == rd) return 0;
 
-    const to_read = Math.min(this._available_read(rd, wr), length ?? elements.length);
+    const to_read = Math.min(
+      this._available_read(rd, wr),
+      length ?? elements.length
+    );
 
     const first_part = Math.min(this._storage_capacity() - rd, to_read);
     const second_part = to_read - first_part;
@@ -94,6 +97,11 @@ export class RingBuffer {
     Atomics.store(this.read_ptr, 0, (rd + to_read) % this._storage_capacity());
 
     return to_read;
+  }
+
+  clear() {
+    const wr = Atomics.load(this.write_ptr, 0);
+    Atomics.store(this.read_ptr, 0, wr);
   }
 
   // True if the ring buffer is empty false otherwise. This can be late on the
