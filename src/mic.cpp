@@ -44,14 +44,14 @@ static float GetLoudness(ArrayW<float> data) {
     float sum = 0;
     for (int i = 0; i < data.size(); i++)
         sum += data[i] * data[i];
-    // call before ScaleData
-    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 50;
+    // call before ScaleData, plus apply a little boost to make 0-2 a good range
+    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 200;
 }
 
 static void ScaleData(ArrayW<float> data) {
-    // not sure why it's so quiet that I have to multiply it by 5
+    // not sure why it's so quiet that I have to multiply it by 10
     // audioSource volume doesn't seem to matter, at least above 1
-    float scale = getConfig().MicVolume.GetValue() * 5;
+    float scale = getConfig().MicVolume.GetValue() * 10;
     for (int i = 0; i < data.size(); i++)
         data[i] *= scale;
     // deal with clipping later, if at all
