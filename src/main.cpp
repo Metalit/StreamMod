@@ -1,15 +1,22 @@
 #include "main.hpp"
 
 #include "GlobalNamespace/MainCamera.hpp"
+#include "UnityEngine/SceneManagement/LoadSceneMode.hpp"
+#include "UnityEngine/SceneManagement/Scene.hpp"
+#include "UnityEngine/SceneManagement/SceneManager.hpp"
 #include "UnityEngine/SpatialTracking/TrackedPoseDriver.hpp"
 #include "beatsaber-hook/shared/utils/hooking.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
 #include "bsml/shared/BSML.hpp"
 #include "config.hpp"
+#include "custom-types/shared/delegate.hpp"
+#include "custom-types/shared/register.hpp"
+#include "fpfc.hpp"
 #include "hollywood/shared/hollywood.hpp"
+#include "hooks.hpp"
 #include "manager.hpp"
 
-MAKE_HOOK_MATCH(MainCamera_Awake, &GlobalNamespace::MainCamera::Awake, void, GlobalNamespace::MainCamera* self) {
+MAKE_AUTO_HOOK_MATCH(MainCamera_Awake, &GlobalNamespace::MainCamera::Awake, void, GlobalNamespace::MainCamera* self) {
     MainCamera_Awake(self);
 
     Manager::SetCamera(self->camera);
@@ -17,7 +24,7 @@ MAKE_HOOK_MATCH(MainCamera_Awake, &GlobalNamespace::MainCamera::Awake, void, Glo
     Manager::Init();
 }
 
-MAKE_HOOK_MATCH(
+MAKE_AUTO_HOOK_MATCH(
     TrackedPoseDriver_Update, &UnityEngine::SpatialTracking::TrackedPoseDriver::Update, void, UnityEngine::SpatialTracking::TrackedPoseDriver* self
 ) {
     TrackedPoseDriver_Update(self);
@@ -55,7 +62,13 @@ extern "C" void late_load() {
 
     BSML::Register::RegisterSettingsMenu("Streamer", &Config::CreateMenu, false);
     BSML::Events::onGameDidRestart.addCallback(&Config::Invalidate);
+    BSML::Events::onGameDidRestart.addCallback(&Manager::Invalidate);
 
-    INSTALL_HOOK(logger, MainCamera_Awake);
-    INSTALL_HOOK(logger, TrackedPoseDriver_Update);
+    namespace Scenes = UnityEngine::SceneManagement;
+
+    Scenes::SceneManager::add_sceneLoaded(BSML::MakeUnityAction<Scenes::Scene, Scenes::LoadSceneMode>(
+        std::function([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); })
+    ));
+
+    Hooks::Install();
 }

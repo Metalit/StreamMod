@@ -12,6 +12,7 @@
 #include "audio.hpp"
 #include "bsml/shared/BSML/MainThreadScheduler.hpp"
 #include "config.hpp"
+#include "fpfc.hpp"
 #include "hollywood/shared/hollywood.hpp"
 #include "main.hpp"
 #include "math.hpp"
@@ -21,6 +22,8 @@ static bool initialized = false;
 
 static Hollywood::CameraCapture* cameraStream = nullptr;
 static StreamMod::AudioCapture* audioStream = nullptr;
+static bool waiting = false;
+static bool capturing = false;
 
 static UnityEngine::Vector3 smoothPosition;
 static UnityEngine::Quaternion smoothRotation;
@@ -32,6 +35,7 @@ static void MakeCamera(UnityEngine::Camera* main) {
     logger.debug("creating camera capture");
     main->gameObject->active = false;
     auto camera = UnityEngine::Object::Instantiate(main);
+    camera->name = "StreamingCamera";
     camera->tag = "Untagged";
     main->gameObject->active = true;
 
@@ -95,14 +99,18 @@ static void MakeAudio(UnityEngine::AudioListener* listener) {
     audioStream->SetMicCapture(getConfig().Mic.GetValue());
 }
 
-static void RefreshAudio() {
+static void StopAudio() {
     if (!audioStream)
         return;
-
-    logger.debug("refreshing audio capture");
+    logger.debug("stopping audio capture");
     audioStream->OnDestroy();
     UnityEngine::Object::DestroyImmediate(audioStream);
     audioStream = nullptr;
+}
+
+static void RefreshAudio() {
+    logger.debug("refreshing audio capture");
+    StopAudio();
     auto listeners = UnityEngine::Resources::FindObjectsOfTypeAll<UnityEngine::AudioListener*>();
     auto listener = listeners->FirstOrDefault([](UnityEngine::AudioListener* l) { return l->isActiveAndEnabled; });
     if (!listener)
@@ -111,29 +119,55 @@ static void RefreshAudio() {
         MakeAudio(listener);
 }
 
+static void UpdateMic() {
+    if (audioStream)
+        audioStream->SetMicCapture(getConfig().Mic.GetValue() && !getConfig().FPFC.GetValue());
+}
+
 void Manager::Init() {
     if (initialized)
         return;
 
     Socket::Init();
 
-    getConfig().Mic.AddChangeEvent([](bool val) {
-        if (audioStream)
-            audioStream->SetMicCapture(val);
+    getConfig().Mic.AddChangeEvent([](bool) { UpdateMic(); });
+    getConfig().FPFC.AddChangeEvent([](bool val) {
+        UpdateMic();
+        if (val)
+            FPFC::GetControllers();
+        else
+            FPFC::ReleaseControllers();
     });
 
     logger.info("initialized streaming manager");
     initialized = true;
 }
 
+void Manager::Invalidate() {
+    cameraStream = nullptr;
+    audioStream = nullptr;
+    waiting = capturing;
+    capturing = false;
+}
+
 void Manager::SetCamera(UnityEngine::Camera* main) {
     MakeCamera(main);
-    MakeAudio(main->GetComponent<UnityEngine::AudioListener*>());
+    if (waiting) {
+        MakeAudio(main->GetComponent<UnityEngine::AudioListener*>());
+        RestartCapture();
+        waiting = false;
+    }
 }
 
 void Manager::SetFollowLocation(UnityEngine::Vector3 pos, UnityEngine::Quaternion rot) {
     if (!cameraStream)
         return;
+    if (getConfig().FPFC.GetValue()) {
+        cameraStream->transform->rotation = FPFC::GetRotation();
+        cameraStream->transform->Translate(FPFC::GetMovement());
+        FPFC::MoveControllers(cameraStream->transform);
+        return;
+    }
     float smoothing = getConfig().Smoothing.GetValue();
     if (smoothing >= 0.1) {
         float deltaTime = UnityEngine::Time::get_deltaTime() * 2 / smoothing;
@@ -154,16 +188,35 @@ static void HandleSettings(Settings const& settings, void* source) {
     getConfig().FOV.SetValue(settings.fov(), false);
     getConfig().Smoothing.SetValue(settings.smoothness(), false);
     getConfig().Mic.SetValue(settings.mic(), false);
+    getConfig().FPFC.SetValue(settings.fpfc(), false);
     getConfig().Save();
     Manager::SendSettings(source);
     Manager::RestartCapture();
     Config::UpdateMenu();
 }
 
+static void HandleInput(Input const& input) {
+    if (!getConfig().FPFC.GetValue())
+        return;
+    FPFC::MouseMove({input.dx(), input.dy()});
+    if (input.mousedown())
+        FPFC::MouseDown();
+    if (input.mouseup())
+        FPFC::MouseUp();
+    FPFC::AddScroll(input.scroll());
+    for (auto& key : input.keysdown())
+        FPFC::KeyDown(key);
+    for (auto& key : input.keysup())
+        FPFC::KeyUp(key);
+}
+
 void Manager::HandleMessage(PacketWrapper const& packet, void* source) {
     switch (packet.Packet_case()) {
         case PacketWrapper::kSettings:
             HandleSettings(packet.settings(), source);
+            break;
+        case PacketWrapper::kInput:
+            HandleInput(packet.input());
             break;
         default:
             break;
@@ -180,14 +233,25 @@ void Manager::SendSettings(void* source) {
     settings.set_fov(getConfig().FOV.GetValue());
     settings.set_smoothness(getConfig().Smoothing.GetValue());
     settings.set_mic(getConfig().Mic.GetValue());
+    settings.set_fpfc(getConfig().FPFC.GetValue());
     logger.debug("sending settings except to {}", source);
     Socket::Send(packet, source);
 }
 
-void Manager::RestartCapture() {
+bool Manager::IsCapturing() {
+    if (waiting)
+        return true;
     if (!cameraStream)
+        return false;
+    return capturing;
+}
+
+void Manager::RestartCapture() {
+    if (!cameraStream) {
+        waiting = true;
         return;
-    logger.debug("refreshing camera capture");
+    }
+    logger.info("refreshing capture");
     cameraStream->Stop();
     cameraStream->Init(
         getConfig().Width.GetValue(),
@@ -196,5 +260,19 @@ void Manager::RestartCapture() {
         getConfig().Bitrate.GetValue() * 1000,
         getConfig().FOV.GetValue()
     );
-    // nothing to do for audio for now
+    if (!audioStream)
+        RefreshAudio();
+    FPFC::GetControllers();
+    waiting = false;
+    capturing = true;
+}
+
+void Manager::StopCapture() {
+    logger.info("stopping capture");
+    if (cameraStream)
+        cameraStream->Stop();
+    StopAudio();
+    FPFC::ReleaseControllers();
+    waiting = false;
+    capturing = false;
 }

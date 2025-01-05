@@ -7,9 +7,12 @@
 
 namespace Manager {
     void Init();
+    void Invalidate();
     void SetCamera(UnityEngine::Camera* main);
     void SetFollowLocation(UnityEngine::Vector3 pos, UnityEngine::Quaternion rot);
     void HandleMessage(PacketWrapper const& packet, void* source);
     void SendSettings(void* source = nullptr);
+    bool IsCapturing();
     void RestartCapture();
+    void StopCapture();
 }

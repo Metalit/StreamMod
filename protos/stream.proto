@@ -9,6 +9,8 @@ message Settings {
 
     bool mic = 6;
     float smoothness = 7;
+
+    bool fpfc = 8;
 }
 
 message VideoFrame {
@@ -21,10 +23,21 @@ message AudioFrame {
     repeated float data = 3;
 }
 
+message Input {
+    float dx = 1;
+    float dy = 2;
+    bool mouseDown = 3;
+    bool mouseUp = 4;
+    float scroll = 5;
+    repeated string keysDown = 6;
+    repeated string keysUp = 7;
+}
+
 message PacketWrapper {
     oneof Packet {
         Settings settings = 1;
         VideoFrame videoFrame = 2;
         AudioFrame audioFrame = 3;
+        Input input = 4;
     }
 }

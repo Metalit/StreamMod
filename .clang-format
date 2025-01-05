@@ -50,8 +50,6 @@ KeepEmptyLinesAtTheStartOfBlocks: true
 LineEnding: LF
 NamespaceIndentation: All
 Macros:
-  - "DECLARE_CLASS_CODEGEN="
-  - "DECLARE_CLASS_CODEGEN_INTERFACES="
   - "DECLARE_JSON_CLASS="
 PackConstructorInitializers: CurrentLine
 PenaltyExcessCharacter: 100

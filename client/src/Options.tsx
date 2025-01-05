@@ -41,6 +41,7 @@ function makeOptionsContext() {
   const [fov, setFov] = createSignal(0);
   const [smoothness, setSmoothness] = createSignal(0);
   const [mic, setMic] = createSignal(false);
+  const [fpfc, setFpfc] = createSignal(false);
 
   const [hasSettings, setHasSettings] = createSignal(false);
 
@@ -58,6 +59,7 @@ function makeOptionsContext() {
       setFov(settings.fov);
       setSmoothness(settings.smoothness);
       setMic(settings.mic);
+      setFpfc(settings.fpfc);
 
       setHasSettings(true);
     });
@@ -77,6 +79,7 @@ function makeOptionsContext() {
           fov: fov(),
           smoothness: smoothness(),
           mic: mic(),
+          fpfc: fpfc(),
         },
       });
   });
@@ -96,6 +99,8 @@ function makeOptionsContext() {
     setSmoothness,
     mic,
     setMic,
+    fpfc,
+    setFpfc,
     hasSettings,
   };
 }
@@ -132,6 +137,8 @@ export function OptionsMenu() {
     setSmoothness,
     mic,
     setMic,
+    fpfc,
+    setFpfc,
     hasSettings,
   } = useOptions();
 
@@ -215,6 +222,12 @@ export function OptionsMenu() {
               <SwitchThumb />
             </SwitchControl>
             <SwitchLabel>Mic Audio</SwitchLabel>
+          </Switch>
+          <Switch checked={fpfc()} onChange={setFpfc}>
+            <SwitchControl>
+              <SwitchThumb />
+            </SwitchControl>
+            <SwitchLabel>FPFC</SwitchLabel>
           </Switch>
         </Show>
       </PopoverContent>

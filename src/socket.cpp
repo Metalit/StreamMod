@@ -29,6 +29,13 @@ static void CloseHandler(connection_hdl connection) {
     logger.info("disconnected: {}", connection.lock().get());
     std::unique_lock lock(connectionsMutex);
     connections.erase(connection);
+    if (!connections.empty())
+        return;
+    BSML::MainThreadScheduler::Schedule([]() {
+        std::shared_lock lock(connectionsMutex);
+        if (connections.empty())
+            Manager::StopCapture();
+    });
 }
 
 static void MessageHandler(connection_hdl connection, server<config::asio>::message_ptr message) {

@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, onMount } from "solid-js";
+import { Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "./components/ui/button";
 import "./App.css";
 import {
@@ -20,6 +20,7 @@ import { RingBuffer } from "./lib/ringbuf";
 import AudioWorkletBuild from "./lib/audio_worklet?worker&url";
 import AudioWorkletDev from "./lib/audio_worklet?url";
 import DecoderWorker from "./lib/decoder_worker?worker";
+import { Input as ProtoInput } from "./proto/stream";
 
 class WebAudioController {
   async config(sampleRate: number, channels: number, bufferTime: number) {
@@ -32,7 +33,7 @@ class WebAudioController {
     )
       return;
 
-    console.log("audio initialize", sampleRate, channels);
+    console.log("audio initialize", sampleRate, channels, capacity);
 
     this.sampleRate = sampleRate;
     this.channels = channels;
@@ -97,6 +98,10 @@ class WebAudioController {
     await this.audioContext?.close();
     this.audioSink = undefined;
     this.audioContext = undefined;
+  }
+
+  async stop() {
+    await this.close();
     this.sampleRate = undefined;
     this.channels = undefined;
     this.buffer?.clear();
@@ -150,24 +155,130 @@ function VideoDownload() {
   );
 }
 
+class InputManager {
+  loop() {
+    if (Object.keys(this.next).length !== 0) {
+      this.send?.(this.next);
+      this.next = {};
+    }
+    this.looping = setTimeout(this.loop.bind(this), this.timeout);
+    // this.looping = requestAnimationFrame(this.send.bind(this));
+  }
+
+  start() {
+    if (!this.looping) this.loop();
+  }
+
+  stop() {
+    if (this.looping) clearTimeout(this.looping);
+    // if (this.looping) cancelAnimationFrame(this.looping);
+    this.looping = undefined;
+  }
+
+  onMouseMove(event: MouseEvent) {
+    this.next.dx = (this.next.dx ?? 0) + event.movementX;
+    this.next.dy = (this.next.dy ?? 0) - event.movementY;
+  }
+
+  onMouseDown(event: MouseEvent) {
+    if (event.button === 0) this.next.mouseDown = true;
+  }
+
+  onMouseUp(event: MouseEvent) {
+    if (event.button === 0) this.next.mouseUp = true;
+  }
+
+  onKeyDown(event: KeyboardEvent) {
+    this.next.keysDown = [...(this.next.keysDown ?? []), event.key];
+  }
+
+  onKeyUp(event: KeyboardEvent) {
+    this.next.keysUp = [...(this.next.keysUp ?? []), event.key];
+  }
+
+  onWheel(event: WheelEvent) {
+    this.next.scroll = (this.next.scroll ?? 0) - event.deltaY / 50;
+  }
+
+  bind() {
+    this.unbind?.();
+
+    const onMouseMove = this.onMouseMove.bind(this);
+    const onMouseDown = this.onMouseDown.bind(this);
+    const onMouseUp = this.onMouseUp.bind(this);
+    const onKeyDown = this.onKeyDown.bind(this);
+    const onKeyUp = this.onKeyUp.bind(this);
+    const onWheel = this.onWheel.bind(this);
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
+    document.addEventListener("wheel", onWheel);
+
+    this.unbind = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      document.removeEventListener("wheel", onWheel);
+      this.unbind = undefined;
+      this.stop();
+    };
+
+    this.start();
+  }
+
+  unbind?: () => void;
+
+  next: Partial<ProtoInput> = {};
+  looping?: NodeJS.Timeout;
+  // looping?: number;
+
+  timeout = 1000 / 60;
+  send?: (value: Partial<ProtoInput>) => void;
+}
+
 const ENABLE_DOWNLOAD_TEST = false;
 
 const decoder = new DecoderWorker();
 const audioManager = new WebAudioController();
+const inputManager = new InputManager();
 
 let canvas: HTMLCanvasElement | undefined;
 
 function Stream() {
-  const { width, height, fps } = useOptions();
-  const { ON_MESSAGE, ON_DISCONNECT } = useSocket();
+  const { width, height, fps, fpfc } = useOptions();
+  const { ON_MESSAGE, ON_DISCONNECT, send } = useSocket();
 
   const [latency, setLatency] = createSignal(0);
   audioManager.reportLatency = setLatency;
 
+  const onLockChange = () => {
+    const locked =
+      canvas !== undefined && document.pointerLockElement === canvas;
+    console.log("pointer lock", locked);
+    if (locked) inputManager.bind();
+    else inputManager.unbind?.();
+  };
+
+  onMount(() => {
+    document.addEventListener("pointerlockchange", onLockChange);
+    inputManager.send = (value: Partial<ProtoInput>) =>
+      send({ $case: "input", value });
+  });
+
+  onCleanup(() => {
+    document.removeEventListener("pointerlockchange", onLockChange);
+    inputManager.unbind?.();
+  });
+
   createEffect(() => {
     decoder.postMessage({
       type: "latency",
-      val: latency(),
+      val: fpfc() ? 0 : latency(),
     });
   });
 
@@ -192,7 +303,11 @@ function Stream() {
     if (packet.$case === "videoFrame")
       decoder.postMessage({ type: "data", val: packet.value.data });
     else if (packet.$case === "audioFrame") {
-      audioManager.config(packet.value.sampleRate, packet.value.channels, 2);
+      audioManager.config(
+        packet.value.sampleRate,
+        packet.value.channels,
+        fpfc() ? 0.2 : 2
+      );
       audioManager.queue(new Float32Array(packet.value.data));
     }
   });
@@ -200,6 +315,10 @@ function Stream() {
   return (
     <canvas
       ref={canvas}
+      onClick={() => {
+        // will throw if you click again too quickly. TODO: set timeout and try again
+        if (fpfc()) canvas?.requestPointerLock().catch(() => {});
+      }}
       width={width()}
       height={height()}
       style={{
