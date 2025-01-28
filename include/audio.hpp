@@ -4,8 +4,7 @@
 #include "custom-types/shared/macros.hpp"
 #include "mic.hpp"
 
-// clang-format off
-DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour,
+DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour) {
     DECLARE_DEFAULT_CTOR();
 
     DECLARE_INSTANCE_METHOD(void, SetMicCapture, bool enabled);
@@ -26,5 +25,4 @@ DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour,
     std::vector<float> gameBuffer;
     std::vector<float> micBuffer;
     std::shared_mutex mutex;
-)
-// clang-format on
+};

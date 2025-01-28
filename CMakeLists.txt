@@ -34,9 +34,15 @@ add_compile_options(-O3)
 add_compile_definitions(VERSION=\"${MOD_VERSION}\")
 add_compile_definitions(MOD_ID=\"${MOD_ID}\")
 
+string(LENGTH "${CMAKE_CURRENT_LIST_DIR}/" FOLDER_LENGTH)
+add_compile_definitions("PAPER_ROOT_FOLDER_LENGTH=${FOLDER_LENGTH}")
+
 # recursively get all src files
 RECURSE_FILES(cpp_file_list ${SOURCE_DIR}/*.cpp)
 RECURSE_FILES(c_file_list ${SOURCE_DIR}/*.c)
+
+RECURSE_FILES(inline_hook_c ${EXTERN_DIR}/includes/beatsaber-hook/shared/inline-hook/*.c)
+RECURSE_FILES(inline_hook_cpp ${EXTERN_DIR}/includes/beatsaber-hook/shared/inline-hook/*.cpp)
 
 # get protobuf source files
 RECURSE_FILES(proto_file_list ${CMAKE_CURRENT_SOURCE_DIR}/protos_cpp/*.cc)
@@ -47,6 +53,8 @@ add_library(
     SHARED
     ${cpp_file_list}
     ${c_file_list}
+    ${inline_hook_c}
+    ${inline_hook_cpp}
     ${proto_file_list}
 )
 

@@ -69,7 +69,6 @@ void FPFC::GetControllers() {
         controller1 = transform->Find("ControllerRight")->GetComponent<VRController*>();
         // in main menu
     } else if (auto objectsSource = Object::FindObjectOfType<FirstPersonFlyingController*>()) {
-        objectsSource->_centerAdjust->ResetRoom();
         objectsSource->_centerAdjust->enabled = false;
         for (auto gameObject : objectsSource->_controllerModels) {
             if (gameObject)

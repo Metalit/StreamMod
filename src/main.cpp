@@ -1,5 +1,6 @@
 #include "main.hpp"
 
+#include "GlobalNamespace/DeactivateMenuControllersOnFocusCaptureOrTrackingLost.hpp"
 #include "GlobalNamespace/MainCamera.hpp"
 #include "UnityEngine/SceneManagement/LoadSceneMode.hpp"
 #include "UnityEngine/SceneManagement/Scene.hpp"
@@ -32,6 +33,20 @@ MAKE_AUTO_HOOK_MATCH(
     // seems to be the only one? I would have expected head
     if (self->poseSource == UnityEngine::SpatialTracking::TrackedPoseDriver::TrackedPose::Center)
         Manager::SetFollowLocation(self->transform->position, self->transform->rotation);
+}
+
+MAKE_AUTO_HOOK_MATCH(
+    DeactivateMenuControllersOnFocusCaptureOrTrackingLost_SetActiveMenuController,
+    &GlobalNamespace::DeactivateMenuControllersOnFocusCaptureOrTrackingLost::SetActiveMenuController,
+    void,
+    GlobalNamespace::DeactivateMenuControllersOnFocusCaptureOrTrackingLost* self,
+    bool active,
+    GlobalNamespace::VRController* controller
+) {
+    if (Manager::IsCapturing() && getConfig().FPFC.GetValue())
+        active = true;
+
+    DeactivateMenuControllersOnFocusCaptureOrTrackingLost_SetActiveMenuController(self, active, controller);
 }
 
 static modloader::ModInfo modInfo = {MOD_ID, VERSION, 0};

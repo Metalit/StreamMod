@@ -5,8 +5,7 @@
 #include "UnityEngine/MonoBehaviour.hpp"
 #include "custom-types/shared/macros.hpp"
 
-// clang-format off
-DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour,
+DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
     DECLARE_DEFAULT_CTOR();
 
     DECLARE_INSTANCE_METHOD(void, Init);
@@ -28,5 +27,4 @@ DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour,
     std::function<void(ArrayW<float>)> callback;
 
     static MicCapture* Create();
-)
-// clang-format on
+};
