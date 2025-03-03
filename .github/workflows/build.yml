@@ -16,11 +16,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         name: Checkout
         with:
           submodules: true
           lfs: true
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          runVcpkgInstall: true
 
       - uses: seanmiddleditch/gha-setup-ninja@v3
 
@@ -30,7 +35,7 @@ jobs:
           cat ${GITHUB_WORKSPACE}/ndkpath.txt
 
       - name: QPM Action
-        uses: Fernthedev/qpm-action@main
+        uses: Fernthedev/qpm-action@v1
         with:
           workflow_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -49,6 +54,7 @@ jobs:
       - name: Build & create qmod
         run: |
           cd ${GITHUB_WORKSPACE}
+          qpm s proto
           qpm s qmod
 
       - name: Get Library Name
