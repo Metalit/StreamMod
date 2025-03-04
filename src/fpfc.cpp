@@ -19,7 +19,6 @@
 #include "VRUIControls/MouseButtonEventData.hpp"
 #include "VRUIControls/MouseState.hpp"
 #include "VRUIControls/VRInputModule.hpp"
-#include "bsml/shared/BSML/MainThreadScheduler.hpp"
 #include "config.hpp"
 #include "hooks.hpp"
 #include "main.hpp"
@@ -131,7 +130,7 @@ void FPFC::ReleaseControllers() {
 }
 
 void FPFC::OnSceneChange() {
-    BSML::MainThreadScheduler::ScheduleAfterTime(0.1, GetControllers);
+    GetControllers();
 }
 
 void FPFC::KeyDown(std::string const& key) {

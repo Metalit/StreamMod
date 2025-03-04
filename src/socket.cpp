@@ -3,10 +3,10 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
-#include "bsml/shared/BSML/MainThreadScheduler.hpp"
 #include "config.hpp"
 #include "main.hpp"
 #include "manager.hpp"
+#include "metacore/shared/unity.hpp"
 
 using namespace websocketpp;
 
@@ -19,7 +19,7 @@ static void OpenHandler(connection_hdl connection) {
     logger.info("connected: {}", connection.lock().get());
     std::unique_lock lock(connectionsMutex);
     connections.emplace(connection);
-    BSML::MainThreadScheduler::Schedule([]() {
+    MetaCore::Unity::ScheduleMainThread([]() {
         Manager::SendSettings();
         Manager::RestartCapture();
     });
@@ -31,7 +31,7 @@ static void CloseHandler(connection_hdl connection) {
     connections.erase(connection);
     if (!connections.empty())
         return;
-    BSML::MainThreadScheduler::Schedule([]() {
+    MetaCore::Unity::ScheduleMainThread([]() {
         std::shared_lock lock(connectionsMutex);
         if (connections.empty())
             Manager::StopCapture();
@@ -41,7 +41,7 @@ static void CloseHandler(connection_hdl connection) {
 static void MessageHandler(connection_hdl connection, server<config::asio>::message_ptr message) {
     PacketWrapper packet;
     packet.ParseFromArray(message->get_payload().data(), message->get_payload().size());
-    BSML::MainThreadScheduler::Schedule([packet = std::move(packet), source = connection.lock().get()]() { Manager::HandleMessage(packet, source); });
+    MetaCore::Unity::ScheduleMainThread([packet = std::move(packet), source = connection.lock().get()]() { Manager::HandleMessage(packet, source); });
 }
 
 static bool StartListen() {
@@ -102,9 +102,9 @@ void Socket::Refresh(std::function<void(bool)> done) {
         }
 
         if (done)
-            BSML::MainThreadScheduler::ScheduleUntil([]() { return !threadRunning; }, [done]() { done(StartListen()); });
+            MetaCore::Unity::ScheduleMainThread([]() { return !threadRunning; }, [done]() { done(StartListen()); });
         else
-            BSML::MainThreadScheduler::ScheduleUntil([]() { return !threadRunning; }, StartListen);
+            MetaCore::Unity::ScheduleMainThread([]() { return !threadRunning; }, StartListen);
     } catch (std::exception const& exc) {
         logger.error("socket closing failed: {}", exc.what());
     }

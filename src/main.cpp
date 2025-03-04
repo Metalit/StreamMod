@@ -1,14 +1,14 @@
 #include "main.hpp"
 
-#include "GlobalNamespace/DeactivateMenuControllersOnFocusCaptureOrTrackingLost.hpp"
+#include "GlobalNamespace/DeactivateVRControllersOnFocusCapture.hpp"
 #include "GlobalNamespace/MainCamera.hpp"
+#include "UnityEngine/GameObject.hpp"
 #include "UnityEngine/SceneManagement/LoadSceneMode.hpp"
 #include "UnityEngine/SceneManagement/Scene.hpp"
 #include "UnityEngine/SceneManagement/SceneManager.hpp"
 #include "UnityEngine/SpatialTracking/TrackedPoseDriver.hpp"
 #include "beatsaber-hook/shared/utils/hooking.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
-#include "bsml/shared/BSML.hpp"
 #include "config.hpp"
 #include "custom-types/shared/delegate.hpp"
 #include "custom-types/shared/register.hpp"
@@ -16,6 +16,11 @@
 #include "hollywood/shared/hollywood.hpp"
 #include "hooks.hpp"
 #include "manager.hpp"
+#include "metacore/shared/delegates.hpp"
+
+#if __has_include("bsml/shared/BSML.hpp")
+#include "bsml/shared/BSML.hpp"
+#endif
 
 MAKE_AUTO_HOOK_MATCH(MainCamera_Awake, &GlobalNamespace::MainCamera::Awake, void, GlobalNamespace::MainCamera* self) {
     MainCamera_Awake(self);
@@ -36,17 +41,17 @@ MAKE_AUTO_HOOK_MATCH(
 }
 
 MAKE_AUTO_HOOK_MATCH(
-    DeactivateMenuControllersOnFocusCaptureOrTrackingLost_SetActiveMenuController,
-    &GlobalNamespace::DeactivateMenuControllersOnFocusCaptureOrTrackingLost::SetActiveMenuController,
+    DeactivateVRControllersOnFocusCapture_UpdateVRControllerActiveState,
+    &GlobalNamespace::DeactivateVRControllersOnFocusCapture::UpdateVRControllerActiveState,
     void,
-    GlobalNamespace::DeactivateMenuControllersOnFocusCaptureOrTrackingLost* self,
-    bool active,
-    GlobalNamespace::VRController* controller
+    GlobalNamespace::DeactivateVRControllersOnFocusCapture* self
 ) {
-    if (Manager::IsCapturing() && getConfig().FPFC.GetValue())
-        active = true;
+    DeactivateVRControllersOnFocusCapture_UpdateVRControllerActiveState(self);
 
-    DeactivateMenuControllersOnFocusCaptureOrTrackingLost_SetActiveMenuController(self, active, controller);
+    if (Manager::IsCapturing() && getConfig().FPFC.GetValue()) {
+        for (auto controller : self->_vrControllerGameObjects)
+            controller->active = true;
+    }
 }
 
 static modloader::ModInfo modInfo = {MOD_ID, VERSION, 0};
@@ -75,15 +80,15 @@ extern "C" void late_load() {
 
     custom_types::Register::AutoRegister();
 
+#if __has_include("bsml/shared/BSML.hpp")
     BSML::Register::RegisterSettingsMenu("Streamer", &Config::CreateMenu, false);
     BSML::Events::onGameDidRestart.addCallback(&Config::Invalidate);
     BSML::Events::onGameDidRestart.addCallback(&Manager::Invalidate);
+#endif
 
     namespace Scenes = UnityEngine::SceneManagement;
 
-    Scenes::SceneManager::add_sceneLoaded(BSML::MakeUnityAction<Scenes::Scene, Scenes::LoadSceneMode>(
-        std::function([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); })
-    ));
+    Scenes::SceneManager::add_sceneLoaded(MetaCore::Delegates::MakeUnityAction([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); }));
 
     Hooks::Install();
 }

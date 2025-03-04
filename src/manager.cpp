@@ -10,7 +10,6 @@
 #include "UnityEngine/Time.hpp"
 #include "UnityEngine/Transform.hpp"
 #include "audio.hpp"
-#include "bsml/shared/BSML/MainThreadScheduler.hpp"
 #include "config.hpp"
 #include "fpfc.hpp"
 #include "hollywood/shared/hollywood.hpp"
@@ -113,9 +112,9 @@ static void RefreshAudio() {
     StopAudio();
     auto listeners = UnityEngine::Resources::FindObjectsOfTypeAll<UnityEngine::AudioListener*>();
     auto listener = listeners->FirstOrDefault([](UnityEngine::AudioListener* l) { return l->isActiveAndEnabled; });
-    if (!listener)
-        BSML::MainThreadScheduler::ScheduleAfterTime(0.5, RefreshAudio);
-    else
+    // if (!listener)
+    //     BSML::MainThreadScheduler::ScheduleAfterTime(0.5, RefreshAudio);
+    // else
         MakeAudio(listener);
 }
 

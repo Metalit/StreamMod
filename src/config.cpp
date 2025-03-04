@@ -1,6 +1,6 @@
 #include "config.hpp"
 
-#include "HMUI/AnimatedSwitchView.hpp"
+#if __has_include("bsml/shared/BSML.hpp")
 #include "System/Net/Dns.hpp"
 #include "System/Net/IPAddress.hpp"
 #include "System/Net/IPHostEntry.hpp"
@@ -8,6 +8,7 @@
 #include "bsml/shared/BSML-Lite.hpp"
 #include "main.hpp"
 #include "manager.hpp"
+#include "metacore/shared/ui.hpp"
 #include "socket.hpp"
 
 static BSML::IncrementSetting* CreateEnumIncrement(
@@ -25,18 +26,6 @@ static BSML::IncrementSetting* CreateEnumIncrement(
     object->text->text = enumStrings[object->currentValue];
     SetButtons(object);
     return object;
-}
-
-static void InstantSetToggle(BSML::ToggleSetting* setting, bool value) {
-    auto toggle = setting->toggle;
-    if (toggle->m_IsOn == value)
-        return;
-    toggle->m_IsOn = value;
-    auto animatedSwitch = toggle->GetComponent<HMUI::AnimatedSwitchView*>();
-    animatedSwitch->HandleOnValueChanged(value);
-    animatedSwitch->_switchAmount = value;
-    animatedSwitch->LerpPosition(value);
-    animatedSwitch->LerpColors(value, animatedSwitch->_highlightAmount, animatedSwitch->_disabledAmount);
 }
 
 static StringW GetIP() {
@@ -165,9 +154,14 @@ void Config::UpdateMenu() {
     fps->set_Value(getConfig().FPS.GetValue());
     fov->set_Value(getConfig().FOV.GetValue());
     smoothness->set_Value(getConfig().Smoothing.GetValue());
-    InstantSetToggle(mic, getConfig().Mic.GetValue());
+    MetaCore::UI::InstantSetToggle(mic, getConfig().Mic.GetValue());
 }
 
 void Config::Invalidate() {
     init = false;
 }
+#else
+void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, bool) {}
+void Config::UpdateMenu() {}
+void Config::Invalidate() {}
+#endif

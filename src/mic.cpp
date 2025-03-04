@@ -3,6 +3,7 @@
 #include "UnityEngine/AudioClip.hpp"
 #include "UnityEngine/AudioRolloffMode.hpp"
 #include "UnityEngine/AudioSettings.hpp"
+#include "UnityEngine/GameObject.hpp"
 #include "config.hpp"
 #include "main.hpp"
 
