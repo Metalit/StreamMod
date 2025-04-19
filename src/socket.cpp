@@ -19,7 +19,7 @@ static void OpenHandler(connection_hdl connection) {
     logger.info("connected: {}", connection.lock().get());
     std::unique_lock lock(connectionsMutex);
     connections.emplace(connection);
-    MetaCore::Unity::ScheduleMainThread([]() {
+    MetaCore::Engine::ScheduleMainThread([]() {
         Manager::SendSettings();
         Manager::RestartCapture();
     });
@@ -31,7 +31,7 @@ static void CloseHandler(connection_hdl connection) {
     connections.erase(connection);
     if (!connections.empty())
         return;
-    MetaCore::Unity::ScheduleMainThread([]() {
+    MetaCore::Engine::ScheduleMainThread([]() {
         std::shared_lock lock(connectionsMutex);
         if (connections.empty())
             Manager::StopCapture();
@@ -41,7 +41,7 @@ static void CloseHandler(connection_hdl connection) {
 static void MessageHandler(connection_hdl connection, server<config::asio>::message_ptr message) {
     PacketWrapper packet;
     packet.ParseFromArray(message->get_payload().data(), message->get_payload().size());
-    MetaCore::Unity::ScheduleMainThread([packet = std::move(packet), source = connection.lock().get()]() { Manager::HandleMessage(packet, source); });
+    MetaCore::Engine::ScheduleMainThread([packet = std::move(packet), source = connection.lock().get()]() { Manager::HandleMessage(packet, source); });
 }
 
 static bool StartListen() {
@@ -102,9 +102,9 @@ void Socket::Refresh(std::function<void(bool)> done) {
         }
 
         if (done)
-            MetaCore::Unity::ScheduleMainThread([]() { return !threadRunning; }, [done]() { done(StartListen()); });
+            MetaCore::Engine::ScheduleMainThread([]() { return !threadRunning; }, [done]() { done(StartListen()); });
         else
-            MetaCore::Unity::ScheduleMainThread([]() { return !threadRunning; }, StartListen);
+            MetaCore::Engine::ScheduleMainThread([]() { return !threadRunning; }, StartListen);
     } catch (std::exception const& exc) {
         logger.error("socket closing failed: {}", exc.what());
     }

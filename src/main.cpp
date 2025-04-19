@@ -75,9 +75,6 @@ extern "C" void setup(CModInfo* info) {
 
 extern "C" void late_load() {
     il2cpp_functions::Init();
-
-    Hollywood::Init();
-
     custom_types::Register::AutoRegister();
 
 #if __has_include("bsml/shared/BSML.hpp")
