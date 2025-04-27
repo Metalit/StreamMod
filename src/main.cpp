@@ -2,11 +2,11 @@
 
 #include "GlobalNamespace/DeactivateVRControllersOnFocusCapture.hpp"
 #include "GlobalNamespace/MainCamera.hpp"
+#include "GlobalNamespace/OVRInput.hpp"
 #include "UnityEngine/GameObject.hpp"
 #include "UnityEngine/SceneManagement/LoadSceneMode.hpp"
 #include "UnityEngine/SceneManagement/Scene.hpp"
 #include "UnityEngine/SceneManagement/SceneManager.hpp"
-#include "UnityEngine/SpatialTracking/TrackedPoseDriver.hpp"
 #include "beatsaber-hook/shared/utils/hooking.hpp"
 #include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
 #include "config.hpp"
@@ -17,6 +17,7 @@
 #include "hooks.hpp"
 #include "manager.hpp"
 #include "metacore/shared/delegates.hpp"
+#include "metacore/shared/unity.hpp"
 
 #if __has_include("bsml/shared/BSML.hpp")
 #include "bsml/shared/BSML.hpp"
@@ -28,16 +29,6 @@ MAKE_AUTO_HOOK_MATCH(MainCamera_Awake, &GlobalNamespace::MainCamera::Awake, void
     Manager::SetCamera(self->camera);
 
     Manager::Init();
-}
-
-MAKE_AUTO_HOOK_MATCH(
-    TrackedPoseDriver_Update, &UnityEngine::SpatialTracking::TrackedPoseDriver::Update, void, UnityEngine::SpatialTracking::TrackedPoseDriver* self
-) {
-    TrackedPoseDriver_Update(self);
-
-    // seems to be the only one? I would have expected head
-    if (self->poseSource == UnityEngine::SpatialTracking::TrackedPoseDriver::TrackedPose::Center)
-        Manager::SetFollowLocation(self->transform->position, self->transform->rotation);
 }
 
 MAKE_AUTO_HOOK_MATCH(
@@ -84,6 +75,8 @@ extern "C" void late_load() {
 #endif
 
     namespace Scenes = UnityEngine::SceneManagement;
+
+    MetaCore::Engine::ScheduleOnUpdate(Manager::Update);
 
     Scenes::SceneManager::add_sceneLoaded(MetaCore::Delegates::MakeUnityAction([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); }));
 

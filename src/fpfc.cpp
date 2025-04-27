@@ -23,6 +23,7 @@
 #include "hooks.hpp"
 #include "main.hpp"
 #include "manager.hpp"
+#include "metacore/shared/input.hpp"
 
 using namespace GlobalNamespace;
 using namespace UnityEngine;
@@ -56,25 +57,13 @@ void FPFC::GetControllers() {
     if (!CapturingFPFC())
         return;
 
-    controller0 = nullptr;
-    controller1 = nullptr;
-
-    // in level
-    if (auto pauseMenu = GetPauseMenu()) {
-        // can't just search for "MenuControllers" because there are two, we need
-        // the one that's a child of the pause menu
-        auto transform = pauseMenu->transform->Find("MenuControllers");
-        controller0 = transform->Find("ControllerLeft")->GetComponent<VRController*>();
-        controller1 = transform->Find("ControllerRight")->GetComponent<VRController*>();
-        // in main menu
-    } else if (auto objectsSource = Object::FindObjectOfType<FirstPersonFlyingController*>()) {
-        objectsSource->_centerAdjust->enabled = false;
-        for (auto gameObject : objectsSource->_controllerModels) {
-            if (gameObject)
-                gameObject->active = false;
-        }
-        controller0 = objectsSource->_controller0;
-        controller1 = objectsSource->_controller1;
+    if (auto input = MetaCore::Input::GetCurrentInputModule()) {
+        controller0 = input->_vrPointer->_leftVRController;
+        controller1 = input->_vrPointer->_rightVRController;
+    } else {
+        logger.debug("no input module");
+        controller0 = nullptr;
+        controller1 = nullptr;
     }
 
     if (controller0 && controller1) {
@@ -108,20 +97,9 @@ static void ReleaseCurrentControllers() {
 void FPFC::ReleaseControllers() {
     logger.info("releasing menu controllers");
 
-    if (auto pauseMenu = GetPauseMenu()) {
-        auto transform = pauseMenu->transform->Find("MenuControllers");
-        controller0 = transform->Find("ControllerLeft")->GetComponent<VRController*>();
-        controller1 = transform->Find("ControllerRight")->GetComponent<VRController*>();
-        ReleaseCurrentControllers();
-    }
-    if (auto objectsSource = Object::FindObjectOfType<FirstPersonFlyingController*>()) {
-        objectsSource->_centerAdjust->enabled = true;
-        for (auto gameObject : objectsSource->_controllerModels) {
-            if (gameObject)
-                gameObject->active = true;
-        }
-        controller0 = objectsSource->_controller0;
-        controller1 = objectsSource->_controller1;
+    if (auto input = MetaCore::Input::GetCurrentInputModule()) {
+        controller0 = input->_vrPointer->_leftVRController;
+        controller1 = input->_vrPointer->_rightVRController;
         ReleaseCurrentControllers();
     }
 

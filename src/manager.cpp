@@ -15,6 +15,7 @@
 #include "hollywood/shared/hollywood.hpp"
 #include "main.hpp"
 #include "math.hpp"
+#include "metacore/shared/input.hpp"
 #include "socket.hpp"
 
 static bool initialized = false;
@@ -115,7 +116,7 @@ static void RefreshAudio() {
     // if (!listener)
     //     BSML::MainThreadScheduler::ScheduleAfterTime(0.5, RefreshAudio);
     // else
-        MakeAudio(listener);
+    MakeAudio(listener);
 }
 
 static void UpdateMic() {
@@ -142,6 +143,28 @@ void Manager::Init() {
     initialized = true;
 }
 
+void Manager::Update() {
+    if (!cameraStream)
+        return;
+    if (getConfig().FPFC.GetValue()) {
+        cameraStream->transform->rotation = FPFC::GetRotation();
+        cameraStream->transform->Translate(FPFC::GetMovement());
+        FPFC::MoveControllers(cameraStream->transform);
+        return;
+    }
+    auto pose = MetaCore::Input::GetHeadPose();
+    float smoothing = getConfig().Smoothing.GetValue();
+    if (smoothing >= 0.1) {
+        float deltaTime = UnityEngine::Time::get_deltaTime() * 2 / smoothing;
+        smoothPosition = EaseLerp(smoothPosition, pose.position, UnityEngine::Time::get_time(), deltaTime);
+        smoothRotation = Slerp(smoothRotation, pose.rotation, deltaTime);
+    } else {
+        smoothPosition = pose.position;
+        smoothRotation = pose.rotation;
+    }
+    cameraStream->transform->SetPositionAndRotation(smoothPosition, smoothRotation);
+}
+
 void Manager::Invalidate() {
     cameraStream = nullptr;
     audioStream = nullptr;
@@ -156,27 +179,6 @@ void Manager::SetCamera(UnityEngine::Camera* main) {
         RestartCapture();
         waiting = false;
     }
-}
-
-void Manager::SetFollowLocation(UnityEngine::Vector3 pos, UnityEngine::Quaternion rot) {
-    if (!cameraStream)
-        return;
-    if (getConfig().FPFC.GetValue()) {
-        cameraStream->transform->rotation = FPFC::GetRotation();
-        cameraStream->transform->Translate(FPFC::GetMovement());
-        FPFC::MoveControllers(cameraStream->transform);
-        return;
-    }
-    float smoothing = getConfig().Smoothing.GetValue();
-    if (smoothing >= 0.1) {
-        float deltaTime = UnityEngine::Time::get_deltaTime() * 2 / smoothing;
-        smoothPosition = EaseLerp(smoothPosition, pos, UnityEngine::Time::get_time(), deltaTime);
-        smoothRotation = Slerp(smoothRotation, rot, deltaTime);
-    } else {
-        smoothPosition = pos;
-        smoothRotation = rot;
-    }
-    cameraStream->transform->SetPositionAndRotation(smoothPosition, smoothRotation);
 }
 
 static void HandleSettings(Settings const& settings, void* source) {
