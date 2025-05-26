@@ -50,6 +50,8 @@ static void MakeCamera(UnityEngine::Camera* main) {
         UnityEngine::Object::DestroyImmediate(comp);
     if (auto comp = camera->GetComponent<UnityEngine::SpatialTracking::TrackedPoseDriver*>())
         UnityEngine::Object::DestroyImmediate(comp);
+    if (auto comp = camera->GetComponent<UnityEngine::AudioListener*>())
+        UnityEngine::Object::DestroyImmediate(comp);
 
     camera->clearFlags = main->clearFlags;
     camera->nearClipPlane = main->nearClipPlane;

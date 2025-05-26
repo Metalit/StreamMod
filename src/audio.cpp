@@ -25,7 +25,7 @@ static void AvgMix(std::vector<float>& base, std::vector<float>& add) {
 static void DuckMix(std::vector<float>& base, std::vector<float>& add, bool duck, bool duckFirst) {
     if (!duck) {
         if (!duckFirst)
-            base = add;
+            base.swap(add);
         return;
     }
     for (int i = 0; i < base.size(); i++) {
