@@ -59,12 +59,12 @@
     },
     {
       "id": "bs-cordl",
-      "versionRange": "^4004.0.0",
+      "versionRange": "^4005.0.0",
       "additionalData": {}
     },
     {
       "id": "paper2_scotland2",
-      "versionRange": "^4.4.2",
+      "versionRange": "^4.6.4",
       "additionalData": {}
     },
     {
@@ -74,7 +74,7 @@
     },
     {
       "id": "hollywood",
-      "versionRange": "^1.0.2",
+      "versionRange": "^1.2.0",
       "additionalData": {}
     },
     {
@@ -84,7 +84,7 @@
     },
     {
       "id": "metacore",
-      "versionRange": "^1.1.0",
+      "versionRange": "^1.2.2",
       "additionalData": {}
     },
     {
