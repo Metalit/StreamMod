@@ -16,6 +16,7 @@
 #include "main.hpp"
 #include "math.hpp"
 #include "metacore/shared/input.hpp"
+#include "metacore/shared/unity.hpp"
 #include "socket.hpp"
 
 static bool initialized = false;
@@ -88,7 +89,7 @@ static void MakeAudio(UnityEngine::AudioListener* listener) {
     logger.debug("creating audio capture");
     audioStream = listener->gameObject->AddComponent<StreamMod::AudioCapture*>();
     audioStream->onDisable = [](StreamMod::AudioCapture*) {
-        RefreshAudio();
+        MetaCore::Engine::ScheduleMainThread(RefreshAudio);  // since this destroys the component, we can't do it in the OnDisable callback
     };
     audioStream->callback = [](std::vector<float> const& samples, int sampleRate, int channels) {
         PacketWrapper packet;
