@@ -16,107 +16,9 @@ import { ConnectionIcon, FullscreenIcon } from "./components/ui/icons";
 import { Input } from "./ui";
 import { OptionsMenu, OptionsProvider, useOptions } from "./Options";
 import { SocketProvider, useSocket } from "./Socket";
-import { RingBuffer } from "./lib/ringbuf";
-import AudioWorkletBuild from "./lib/audio_worklet?worker&url";
-import AudioWorkletDev from "./lib/audio_worklet?url";
 import DecoderWorker from "./lib/decoder_worker?worker";
 import { Input as ProtoInput } from "./proto/stream";
-
-class WebAudioController {
-  async config(sampleRate: number, channels: number, bufferTime: number) {
-    const capacity = sampleRate * channels * bufferTime;
-
-    if (
-      this.sampleRate === sampleRate &&
-      this.channels === channels &&
-      this.buffer?.capacity() === capacity
-    )
-      return;
-
-    console.log("audio initialize", sampleRate, channels, capacity);
-
-    this.sampleRate = sampleRate;
-    this.channels = channels;
-
-    if (!this.buffer || this.buffer.capacity() !== capacity) {
-      const storage = RingBuffer.getStorageForCapacity(capacity, Float32Array);
-      this.buffer = new RingBuffer(storage, Float32Array);
-    }
-
-    if (this.audioContext) await this.close();
-
-    // set up the context - requires user to have interacted
-    this.audioContext = new AudioContext({
-      sampleRate: sampleRate,
-      latencyHint: "interactive",
-    });
-    await this.audioContext.suspend();
-
-    // register the worklet
-    // https://github.com/vitejs/vite/issues/6979
-    await this.audioContext.audioWorklet.addModule(
-      import.meta.env.PROD ? AudioWorkletBuild : AudioWorkletDev
-    );
-
-    // "audio_worklet" is the name given to registerProcessor in lib/audio_worklet.ts
-    this.audioSink = new AudioWorkletNode(this.audioContext, "audio_worklet", {
-      processorOptions: {
-        buffer: this.buffer.buf,
-      },
-      outputChannelCount: [channels],
-    });
-    this.audioSink.connect(this.audioContext.destination);
-    return this.play();
-  }
-
-  queue(data: Float32Array) {
-    this.buffer?.push(data);
-  }
-
-  report() {
-    const latency =
-      this.audioContext!.baseLatency +
-      this.audioContext!.outputLatency +
-      this.buffer!.available_read() / (this.sampleRate! * this.channels!);
-    this.reportLatency?.(latency);
-    this.reporting = setTimeout(this.report.bind(this), 500);
-  }
-
-  async play() {
-    await this.audioContext?.resume();
-    this.report();
-  }
-
-  async pause() {
-    clearTimeout(this.reporting);
-    return this.audioContext?.suspend();
-  }
-
-  async close() {
-    await this.pause();
-    this.audioSink?.disconnect();
-    await this.audioContext?.close();
-    this.audioSink = undefined;
-    this.audioContext = undefined;
-  }
-
-  async stop() {
-    await this.close();
-    this.sampleRate = undefined;
-    this.channels = undefined;
-    this.buffer?.clear();
-  }
-
-  sampleRate?: number;
-  channels?: number;
-
-  audioContext?: AudioContext;
-  audioSink?: AudioWorkletNode;
-  buffer?: RingBuffer;
-
-  reportLatency?: (val: number) => void;
-  reporting?: NodeJS.Timeout;
-}
+import { WebAudioController } from "./lib/audio_controller";
 
 function VideoDownload() {
   const { ON_MESSAGE, ON_DISCONNECT } = useSocket();
@@ -329,7 +231,7 @@ function Stream() {
 }
 
 function ConnectMenu() {
-  const { autoConnect, connect, disconnect, connection } = useSocket();
+  const { connect, disconnect, connection } = useSocket();
 
   const [ip, setIp] = createPersistentSignal("connect.address", "192.168.0.1");
   const [port, setPort] = createPersistentSignal("connect.port", "3308");
@@ -342,10 +244,6 @@ function ConnectMenu() {
     if (connection()) disconnect();
     if (reconnect) connect(ip(), port());
   };
-
-  onMount(() => {
-    if (autoConnect()) submit();
-  });
 
   return (
     <Popover placement="bottom-end">

@@ -37,22 +37,30 @@ export class EventListener<T> {
 
 function makeSocketContext() {
   let socket: WebSocket | undefined;
-
-  const [autoConnect, setAutoConnect] = createSignal(false);
+  let reconnect = false;
 
   const [currentIp, setCurrentIp] = createSignal<string>();
   const [currentPort, setCurrentPort] = createSignal<string>();
 
   const ON_CONNECT = new EventListener<void>();
-  const ON_DISCONNECT = new EventListener<boolean>();
+  const ON_DISCONNECT = new EventListener<void>();
   const ON_ERROR = new EventListener<Event>();
   const ON_MESSAGE = new EventListener<NonNullable<PacketWrapper["Packet"]>>();
 
   const connect = (ip: string, port: string) => {
+    if (
+      socket?.readyState === WebSocket.OPEN &&
+      ip === currentIp() &&
+      port === currentPort()
+    )
+      return;
+
+    disconnect();
+
     batch(() => {
-      setAutoConnect(true);
       setCurrentIp(ip);
       setCurrentPort(port);
+      reconnect = true;
       socket = new WebSocket(`ws://${ip}:${port}`);
       socket.binaryType = "arraybuffer";
       socket.onopen = onOpen;
@@ -63,7 +71,7 @@ function makeSocketContext() {
   };
 
   const disconnect = () => {
-    setAutoConnect(false);
+    reconnect = false;
     socket?.close();
   };
 
@@ -74,9 +82,6 @@ function makeSocketContext() {
     return { ip, port };
   };
 
-  // const send = (message: Parameters<typeof PacketWrapper.fromPartial>[0]["Packet"]) => {
-  //   socket?.send(PacketWrapper.encode(PacketWrapper.fromPartial({Packet: message})).finish());
-  // };
   const send = <I extends Exact<DeepPartial<PacketWrapper["Packet"]>, I>>(
     message: I
   ) => {
@@ -84,9 +89,6 @@ function makeSocketContext() {
       PacketWrapper.encode(PacketWrapper.create({ Packet: message })).finish()
     );
   };
-  // const send = (message: PacketWrapper) => {
-  //   socket?.send(PacketWrapper.encode(message).finish());
-  // };
 
   const onOpen = () => {
     console.log("socket connected");
@@ -99,10 +101,15 @@ function makeSocketContext() {
   };
 
   const onClose = (e: CloseEvent) => {
-    console.log("socket disconnected", e);
-    ON_DISCONNECT.invoke(!autoConnect());
-    if (autoConnect()) connect(currentIp()!, currentPort()!);
-    else {
+    console.log("socket disconnected", reconnect, e);
+    socket?.close();
+    if (reconnect) {
+      setTimeout(() => {
+        if (reconnect) connect(currentIp()!, currentPort()!);
+        else onClose(e);
+      }, 2000);
+    } else {
+      ON_DISCONNECT.invoke();
       batch(() => {
         setCurrentIp(undefined);
         setCurrentPort(undefined);
@@ -117,7 +124,6 @@ function makeSocketContext() {
   };
 
   return {
-    autoConnect,
     connect,
     disconnect,
     connection,
