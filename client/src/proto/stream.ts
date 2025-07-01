@@ -19,16 +19,22 @@ export interface Settings {
   mic: boolean;
   smoothness: number;
   fpfc: boolean;
+  gameVolume: number;
+  micVolume: number;
+  micThreshold: number;
+  micMix: number;
 }
 
 export interface VideoFrame {
   data: Uint8Array;
+  time: number;
 }
 
 export interface AudioFrame {
   channels: number;
   sampleRate: number;
   data: number[];
+  time: number;
 }
 
 export interface Input {
@@ -51,7 +57,20 @@ export interface PacketWrapper {
 }
 
 function createBaseSettings(): Settings {
-  return { horizontal: 0, vertical: 0, bitrate: 0, fps: 0, fov: 0, mic: false, smoothness: 0, fpfc: false };
+  return {
+    horizontal: 0,
+    vertical: 0,
+    bitrate: 0,
+    fps: 0,
+    fov: 0,
+    mic: false,
+    smoothness: 0,
+    fpfc: false,
+    gameVolume: 0,
+    micVolume: 0,
+    micThreshold: 0,
+    micMix: 0,
+  };
 }
 
 export const Settings: MessageFns<Settings> = {
@@ -79,6 +98,18 @@ export const Settings: MessageFns<Settings> = {
     }
     if (message.fpfc !== false) {
       writer.uint32(64).bool(message.fpfc);
+    }
+    if (message.gameVolume !== 0) {
+      writer.uint32(77).float(message.gameVolume);
+    }
+    if (message.micVolume !== 0) {
+      writer.uint32(85).float(message.micVolume);
+    }
+    if (message.micThreshold !== 0) {
+      writer.uint32(93).float(message.micThreshold);
+    }
+    if (message.micMix !== 0) {
+      writer.uint32(96).uint32(message.micMix);
     }
     return writer;
   },
@@ -154,6 +185,38 @@ export const Settings: MessageFns<Settings> = {
           message.fpfc = reader.bool();
           continue;
         }
+        case 9: {
+          if (tag !== 77) {
+            break;
+          }
+
+          message.gameVolume = reader.float();
+          continue;
+        }
+        case 10: {
+          if (tag !== 85) {
+            break;
+          }
+
+          message.micVolume = reader.float();
+          continue;
+        }
+        case 11: {
+          if (tag !== 93) {
+            break;
+          }
+
+          message.micThreshold = reader.float();
+          continue;
+        }
+        case 12: {
+          if (tag !== 96) {
+            break;
+          }
+
+          message.micMix = reader.uint32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -176,18 +239,25 @@ export const Settings: MessageFns<Settings> = {
     message.mic = object.mic ?? false;
     message.smoothness = object.smoothness ?? 0;
     message.fpfc = object.fpfc ?? false;
+    message.gameVolume = object.gameVolume ?? 0;
+    message.micVolume = object.micVolume ?? 0;
+    message.micThreshold = object.micThreshold ?? 0;
+    message.micMix = object.micMix ?? 0;
     return message;
   },
 };
 
 function createBaseVideoFrame(): VideoFrame {
-  return { data: new Uint8Array(0) };
+  return { data: new Uint8Array(0), time: 0 };
 }
 
 export const VideoFrame: MessageFns<VideoFrame> = {
   encode(message: VideoFrame, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.data.length !== 0) {
       writer.uint32(10).bytes(message.data);
+    }
+    if (message.time !== 0) {
+      writer.uint32(16).uint32(message.time);
     }
     return writer;
   },
@@ -207,6 +277,14 @@ export const VideoFrame: MessageFns<VideoFrame> = {
           message.data = reader.bytes();
           continue;
         }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.time = reader.uint32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -222,12 +300,13 @@ export const VideoFrame: MessageFns<VideoFrame> = {
   fromPartial<I extends Exact<DeepPartial<VideoFrame>, I>>(object: I): VideoFrame {
     const message = createBaseVideoFrame();
     message.data = object.data ?? new Uint8Array(0);
+    message.time = object.time ?? 0;
     return message;
   },
 };
 
 function createBaseAudioFrame(): AudioFrame {
-  return { channels: 0, sampleRate: 0, data: [] };
+  return { channels: 0, sampleRate: 0, data: [], time: 0 };
 }
 
 export const AudioFrame: MessageFns<AudioFrame> = {
@@ -243,6 +322,9 @@ export const AudioFrame: MessageFns<AudioFrame> = {
       writer.float(v);
     }
     writer.join();
+    if (message.time !== 0) {
+      writer.uint32(32).uint32(message.time);
+    }
     return writer;
   },
 
@@ -287,6 +369,14 @@ export const AudioFrame: MessageFns<AudioFrame> = {
 
           break;
         }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.time = reader.uint32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -304,6 +394,7 @@ export const AudioFrame: MessageFns<AudioFrame> = {
     message.channels = object.channels ?? 0;
     message.sampleRate = object.sampleRate ?? 0;
     message.data = object.data?.map((e) => e) || [];
+    message.time = object.time ?? 0;
     return message;
   },
 };

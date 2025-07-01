@@ -29,6 +29,10 @@ static bool capturing = false;
 static UnityEngine::Vector3 smoothPosition;
 static UnityEngine::Quaternion smoothRotation;
 
+static inline uint64_t Time() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 static void MakeCamera(UnityEngine::Camera* main) {
     if (cameraStream)
         return;
@@ -70,6 +74,7 @@ static void MakeCamera(UnityEngine::Camera* main) {
         PacketWrapper packet;
         auto& video = *packet.mutable_videoframe();
         *video.mutable_data() = {(char*) data, length};
+        video.set_time(Time());
         Socket::Send(packet);
     };
 
@@ -96,6 +101,7 @@ static void MakeAudio(UnityEngine::AudioListener* listener) {
         auto& audio = *packet.mutable_audioframe();
         audio.set_channels(channels);
         audio.set_samplerate(sampleRate);
+        audio.set_time(Time());
         *audio.mutable_data() = {samples.begin(), samples.end()};
         Socket::Send(packet);
     };
@@ -116,9 +122,6 @@ static void RefreshAudio() {
     StopAudio();
     auto listeners = UnityEngine::Resources::FindObjectsOfTypeAll<UnityEngine::AudioListener*>();
     auto listener = listeners->FirstOrDefault([](UnityEngine::AudioListener* l) { return l->isActiveAndEnabled; });
-    // if (!listener)
-    //     BSML::MainThreadScheduler::ScheduleAfterTime(0.5, RefreshAudio);
-    // else
     MakeAudio(listener);
 }
 
@@ -193,6 +196,10 @@ static void HandleSettings(Settings const& settings, void* source) {
     getConfig().Smoothing.SetValue(settings.smoothness(), false);
     getConfig().Mic.SetValue(settings.mic(), false);
     getConfig().FPFC.SetValue(settings.fpfc(), false);
+    getConfig().GameVolume.SetValue(settings.gamevolume(), false);
+    getConfig().MicVolume.SetValue(settings.micvolume(), false);
+    getConfig().MicThreshold.SetValue(settings.micthreshold(), false);
+    getConfig().MixMode.SetValue(settings.micmix(), false);
     getConfig().Save();
     Manager::SendSettings(source);
     Manager::RestartCapture();
@@ -238,6 +245,10 @@ void Manager::SendSettings(void* source) {
     settings.set_smoothness(getConfig().Smoothing.GetValue());
     settings.set_mic(getConfig().Mic.GetValue());
     settings.set_fpfc(getConfig().FPFC.GetValue());
+    settings.set_gamevolume(getConfig().GameVolume.GetValue());
+    settings.set_micvolume(getConfig().MicVolume.GetValue());
+    settings.set_micthreshold(getConfig().MicThreshold.GetValue());
+    settings.set_micmix(getConfig().MixMode.GetValue());
     logger.debug("sending settings except to {}", source);
     Socket::Send(packet, source);
 }

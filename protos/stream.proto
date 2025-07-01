@@ -11,16 +11,23 @@ message Settings {
     float smoothness = 7;
 
     bool fpfc = 8;
+
+    float gameVolume = 9;
+    float micVolume = 10;
+    float micThreshold = 11;
+    uint32 micMix = 12;
 }
 
 message VideoFrame {
     bytes data = 1;
+    uint64 time = 2;
 }
 
 message AudioFrame {
     uint32 channels = 1;
     uint32 sampleRate = 2;
     repeated float data = 3;
+    uint64 time = 4;
 }
 
 message Input {

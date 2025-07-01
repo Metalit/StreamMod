@@ -4,8 +4,9 @@
 #include "config-utils/shared/config-utils.hpp"
 
 namespace Config {
-    inline std::vector<std::pair<int, int>> const resolutions = {{1280, 720}, {1920, 1080}, {2560, 1440}};
-    inline std::vector<std::string> const resolutionStrings = {"720p", "1080p", "1440p"};
+    inline std::vector<std::pair<int, int>> const Resolutions = {{1280, 720}, {1920, 1080}, {2560, 1440}};
+    inline std::vector<std::string> const ResolutionStrings = {"720p", "1080p", "1440p"};
+    static std::vector<std::string> const MixModeStrings = {"Combine", "Duck", "Add"};
 
     void CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, bool);
     void UpdateMenu();
@@ -15,8 +16,8 @@ namespace Config {
 DECLARE_CONFIG(Config) {
     CONFIG_VALUE(Port, std::string, "Connection Port", "3308", "The port to listen for connections on");
 
-    CONFIG_VALUE(Width, int, "Resolution Width", Config::resolutions[0].first);
-    CONFIG_VALUE(Height, int, "Resolution Height", Config::resolutions[0].second);
+    CONFIG_VALUE(Width, int, "Resolution Width", Config::Resolutions[0].first);
+    CONFIG_VALUE(Height, int, "Resolution Height", Config::Resolutions[0].second);
     CONFIG_VALUE(Bitrate, int, "Stream Bitrate", 10000, "The bitrate of the stream in kbps");
     CONFIG_VALUE(FPS, float, "Stream FPS", 30, "The frames per second of the stream");
     CONFIG_VALUE(FOV, float, "Stream FOV", 80, "The fov of the stream camera");

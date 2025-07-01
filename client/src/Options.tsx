@@ -30,6 +30,8 @@ const resolutions = {
   "1440p": [2560, 1440],
 } as const;
 
+const micMixModes = ["Combine", "Duck", "Add"];
+
 function makeOptionsContext() {
   const { send, ON_DISCONNECT, ON_MESSAGE } = useSocket();
 
@@ -42,6 +44,10 @@ function makeOptionsContext() {
   const [smoothness, setSmoothness] = createSignal(0);
   const [mic, setMic] = createSignal(false);
   const [fpfc, setFpfc] = createSignal(false);
+  const [gameVolume, setGameVolume] = createSignal(0);
+  const [micVolume, setMicVolume] = createSignal(0);
+  const [micThreshold, setMicThreshold] = createSignal(0);
+  const [micMix, setMicMix] = createSignal(0);
 
   const [hasSettings, setHasSettings] = createSignal(false);
 
@@ -60,6 +66,10 @@ function makeOptionsContext() {
       setSmoothness(settings.smoothness);
       setMic(settings.mic);
       setFpfc(settings.fpfc);
+      setGameVolume(settings.gameVolume);
+      setMicVolume(settings.micVolume);
+      setMicThreshold(settings.micThreshold);
+      setMicMix(settings.micMix);
 
       setHasSettings(true);
     });
@@ -80,6 +90,10 @@ function makeOptionsContext() {
           smoothness: smoothness(),
           mic: mic(),
           fpfc: fpfc(),
+          gameVolume: gameVolume(),
+          micVolume: micVolume(),
+          micThreshold: micThreshold(),
+          micMix: micMix(),
         },
       });
   });
@@ -101,6 +115,14 @@ function makeOptionsContext() {
     setMic,
     fpfc,
     setFpfc,
+    gameVolume,
+    setGameVolume,
+    micVolume,
+    setMicVolume,
+    micThreshold,
+    setMicThreshold,
+    micMix,
+    setMicMix,
     hasSettings,
   };
 }
@@ -139,6 +161,14 @@ export function OptionsMenu() {
     setMic,
     fpfc,
     setFpfc,
+    gameVolume,
+    setGameVolume,
+    micVolume,
+    setMicVolume,
+    micThreshold,
+    setMicThreshold,
+    micMix,
+    setMicMix,
     hasSettings,
   } = useOptions();
 
@@ -162,6 +192,10 @@ export function OptionsMenu() {
       setHeight(h);
     });
   });
+
+  const micMixString = () => micMixModes.at(micMix()) ?? "Invalid";
+  const setMicMixString = (value: string) =>
+    setMicMix(micMixModes.indexOf(value));
 
   return (
     <Popover placement="bottom-end">
@@ -229,6 +263,40 @@ export function OptionsMenu() {
             </SwitchControl>
             <SwitchLabel>FPFC</SwitchLabel>
           </Switch>
+          <Separator />
+          <Slider
+            name="Game Volume"
+            value={gameVolume()}
+            onChange={setGameVolume}
+            min={0}
+            max={2}
+            step={0.1}
+            label={(val) => val.toFixed(1)}
+          />
+          <Slider
+            name="Mic Volume"
+            value={micVolume()}
+            onChange={setMicVolume}
+            min={0}
+            max={2}
+            step={0.1}
+            label={(val) => val.toFixed(1)}
+          />
+          <Slider
+            name="Mic Threshold"
+            value={micThreshold()}
+            onChange={setMicThreshold}
+            min={0}
+            max={2}
+            step={0.1}
+            label={(val) => val.toFixed(1)}
+          />
+          <Select
+            name="Mic Mixing"
+            value={micMixString()}
+            onChange={setMicMixString}
+            options={micMixModes}
+          />
         </Show>
       </PopoverContent>
     </Popover>
