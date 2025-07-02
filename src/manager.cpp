@@ -61,7 +61,7 @@ static void MakeCamera(UnityEngine::Camera* main) {
     camera->clearFlags = main->clearFlags;
     camera->nearClipPlane = main->nearClipPlane;
     camera->farClipPlane = main->farClipPlane;
-    camera->backgroundColor = main->backgroundColor;
+    camera->backgroundColor = {0, 0, 0, 0};
     camera->hideFlags = main->hideFlags;
     camera->depthTextureMode = main->depthTextureMode;
     camera->cullingMask = main->cullingMask;
