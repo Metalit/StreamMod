@@ -96,7 +96,7 @@ static void MakeAudio(UnityEngine::AudioListener* listener) {
     audioStream->onDisable = [](StreamMod::AudioCapture*) {
         MetaCore::Engine::ScheduleMainThread(RefreshAudio);  // since this destroys the component, we can't do it in the OnDisable callback
     };
-    audioStream->callback = [](std::vector<float> const& samples, int sampleRate, int channels) {
+    audioStream->callback = [](std::span<float> samples, int sampleRate, int channels) {
         PacketWrapper packet;
         auto& audio = *packet.mutable_audioframe();
         audio.set_channels(channels);

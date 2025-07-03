@@ -12,6 +12,8 @@ DEFINE_TYPE(StreamMod, MicCapture);
 using namespace StreamMod;
 using namespace UnityEngine;
 
+static constexpr float LoudnessDecreasePerSecond = 5;
+
 static ArrayW<StringW> GetDevices() {
     static auto icall = il2cpp_utils::resolve_icall<ArrayW<StringW>>("UnityEngine.Microphone::get_devices");
     return icall();
@@ -45,17 +47,8 @@ static float GetLoudness(ArrayW<float> data) {
     float sum = 0;
     for (int i = 0; i < data.size(); i++)
         sum += data[i] * data[i];
-    // call before ScaleData, plus apply a little boost to make 0-2 a good range
-    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 200;
-}
-
-static void ScaleData(ArrayW<float> data) {
-    // not sure why it's so quiet that I have to multiply it by 10
-    // audioSource volume doesn't seem to matter, at least above 1
-    float scale = getConfig().MicVolume.GetValue() * 10;
-    for (int i = 0; i < data.size(); i++)
-        data[i] *= scale;
-    // deal with clipping later, if at all
+    // apply a boost to make 0-2 a good range (why so much? idk)
+    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 100;
 }
 
 void MicCapture::Init() {
@@ -109,19 +102,18 @@ void MicCapture::Stop() {
 
 void MicCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
     channels = audioChannels;
-    bool zeroed = false;
     if (sampleRate != -1 && callback) {
-        currentLoudness = GetLoudness(data);
-        if (currentLoudness < getConfig().MicThreshold.GetValue()) {
-            zeroed = true;
-            std::fill(data.begin(), data.end(), 0);
-        } else
-            ScaleData(data);
+        float newLoudness = GetLoudness(data);
+        if (newLoudness < currentLoudness)
+            currentLoudness -= (LoudnessDecreasePerSecond * data.size()) / (sampleRate * audioChannels);
+        else
+            currentLoudness = newLoudness;
+        if (currentLoudness < 0)
+            currentLoudness = 0;
         callback(data);
     }
     // make sure nothing is actually played
-    if (!zeroed)
-        std::fill(data.begin(), data.end(), 0);
+    std::fill(data.begin(), data.end(), 0);
 }
 
 void MicCapture::OnDestroy() {

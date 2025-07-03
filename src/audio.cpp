@@ -10,31 +10,22 @@ DEFINE_TYPE(StreamMod, AudioCapture);
 
 using namespace StreamMod;
 
-static void AddMix(std::vector<float>& base, std::vector<float>& add) {
-    for (int i = 0; i < add.size(); i++)
+static void AddMix(std::vector<float>& base, std::vector<float>& add, int size) {
+    for (int i = 0; i < size; i++)
         base[i] += add[i];
 }
 
-static void AvgMix(std::vector<float>& base, std::vector<float>& add) {
-    for (int i = 0; i < base.size(); i++) {
-        auto const& val = i < add.size() ? add[i] : 0;
-        base[i] = (base[i] + val) / 2;
-    }
+static void AvgMix(std::vector<float>& base, std::vector<float>& add, int size) {
+    for (int i = 0; i < size; i++)
+        base[i] = (base[i] + add[i]) / 2;
 }
 
-static void DuckMix(std::vector<float>& base, std::vector<float>& add, bool duck, bool duckFirst) {
-    if (!duck) {
-        if (!duckFirst)
-            base.swap(add);
-        return;
-    }
-    for (int i = 0; i < base.size(); i++) {
-        auto const& val = i < add.size() ? add[i] : 0;
-        if (duckFirst)
-            base[i] = base[i] / 2 + val;
-        else
-            base[i] = base[i] + val / 2;
-    }
+template <class T>
+static void ScaledInsert(T& mutex, std::vector<float>& buffer, ArrayW<float>& data, float volume) {
+    std::shared_lock lock(mutex);
+    buffer.reserve(buffer.size() + data.size());
+    for (float sample : data)
+        buffer.emplace_back(sample * volume);
 }
 
 void AudioCapture::SetMicCapture(bool enabled) {
@@ -45,10 +36,13 @@ void AudioCapture::SetMicCapture(bool enabled) {
             mic->callback = [this](ArrayW<float> data) {
                 if (channels == -1 || sampleRate == -1)
                     return;
-                std::shared_lock lock(mutex);
-                micBuffer.insert(micBuffer.end(), data->begin(), data->end());
-                if (mic->currentLoudness >= getConfig().MicThreshold.GetValue())
-                    mixLastMic = true;
+                bool overThreshold = mic->currentLoudness >= getConfig().MicThreshold.GetValue();
+                if (overThreshold)
+                    hasMicData = true;
+                // not sure why it's so quiet that I have to multiply it by 10
+                // audioSource volume doesn't seem to matter, at least above 1
+                float volume = overThreshold ? getConfig().MicVolume.GetValue() * 10 : 0;
+                ScaledInsert(mutex, micBuffer, data, volume);
             };
         }
         mic->Init();
@@ -60,11 +54,7 @@ void AudioCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
     channels = audioChannels;
     if (sampleRate == -1)
         return;  // can't get it on this thread
-    std::shared_lock lock(mutex);
-    gameBuffer.reserve(gameBuffer.size() + data.size());
-    float volume = getConfig().GameVolume.GetValue();
-    for (float sample : data)
-        gameBuffer.emplace_back(sample * volume);
+    ScaledInsert(mutex, gameBuffer, data, getConfig().GameVolume.GetValue());
 }
 
 void AudioCapture::Update() {
@@ -83,32 +73,27 @@ void AudioCapture::Update() {
         return;
     }
 
-    if (mic->channels != channels || mic->sampleRate != sampleRate)
+    if (mic->channels != -1 && mic->sampleRate != -1 && (mic->channels != channels || mic->sampleRate != sampleRate))
         logger.warn("mismatch in reported config! mic: {}/{}, game: {}/{}", mic->channels, mic->sampleRate, channels, sampleRate);
 
-    if (micBuffer.empty() && gameBuffer.empty())
-        return;
-
-    bool flag = micBuffer.size() > gameBuffer.size();
-    auto& base = flag ? micBuffer : gameBuffer;
-    auto& add = flag ? gameBuffer : micBuffer;
+    int size = std::min(gameBuffer.size(), micBuffer.size());
 
     switch (getConfig().MixMode.GetValue()) {
         case 1:
-            AvgMix(base, add);
-            break;
-        case 2:
-            DuckMix(base, add, mixLastMic, flag);
+            if (!hasMicData)
+                break;
+        case 0:
+            AvgMix(gameBuffer, micBuffer, size);
             break;
         default:
-            AddMix(base, add);
+            AddMix(gameBuffer, micBuffer, size);
             break;
     }
-    callback(base, sampleRate, channels);
+    callback(std::span(gameBuffer).subspan(0, size), sampleRate, channels);
 
-    gameBuffer.clear();
-    micBuffer.clear();
-    mixLastMic = false;
+    gameBuffer.erase(gameBuffer.begin(), gameBuffer.begin() + size);
+    micBuffer.erase(micBuffer.begin(), micBuffer.begin() + size);
+    hasMicData = false;
 }
 
 void AudioCapture::OnDisable() {

@@ -16,9 +16,9 @@ DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
     DECLARE_INSTANCE_FIELD_DEFAULT(int, sampleRate, -1);
     DECLARE_INSTANCE_FIELD_DEFAULT(int, channels, -1);
     DECLARE_INSTANCE_FIELD_DEFAULT(int, deviceId, -1);
-    DECLARE_INSTANCE_FIELD(int, bufferPos);
+    DECLARE_INSTANCE_FIELD_DEFAULT(int, bufferPos, 0);
 
-    DECLARE_INSTANCE_FIELD_DEFAULT(int, currentLoudness, 0);
+    DECLARE_INSTANCE_FIELD_DEFAULT(float, currentLoudness, 0);
 
     DECLARE_INSTANCE_FIELD(UnityEngine::AudioClip*, audioClip);
     DECLARE_INSTANCE_FIELD(UnityEngine::AudioSource*, audioSource);
