@@ -11,7 +11,7 @@ namespace Manager {
     void Invalidate();
     void SetCamera(UnityEngine::Camera* main);
     void HandleMessage(PacketWrapper const& packet, void* source);
-    void SendSettings(void* source = nullptr);
+    void UpdateSettings(void* source = nullptr);
     bool IsCapturing();
     void RestartCapture();
     void StopCapture();

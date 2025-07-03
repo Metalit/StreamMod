@@ -61,7 +61,10 @@ void AudioCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
     if (sampleRate == -1)
         return;  // can't get it on this thread
     std::shared_lock lock(mutex);
-    gameBuffer.insert(gameBuffer.end(), data->begin(), data->end());
+    gameBuffer.reserve(gameBuffer.size() + data.size());
+    float volume = getConfig().GameVolume.GetValue();
+    for (float sample : data)
+        gameBuffer.emplace_back(sample * volume);
 }
 
 void AudioCapture::Update() {

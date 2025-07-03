@@ -20,8 +20,7 @@ static void OpenHandler(connection_hdl connection) {
     std::unique_lock lock(connectionsMutex);
     connections.emplace(connection);
     MetaCore::Engine::ScheduleMainThread([]() {
-        Manager::SendSettings();
-        Manager::RestartCapture();
+        Manager::UpdateSettings();
     });
 }
 

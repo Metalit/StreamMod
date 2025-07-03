@@ -201,8 +201,7 @@ static void HandleSettings(Settings const& settings, void* source) {
     getConfig().MicThreshold.SetValue(settings.micthreshold(), false);
     getConfig().MixMode.SetValue(settings.micmix(), false);
     getConfig().Save();
-    Manager::SendSettings(source);
-    Manager::RestartCapture();
+    Manager::UpdateSettings(source);
     Config::UpdateMenu();
 }
 
@@ -234,7 +233,7 @@ void Manager::HandleMessage(PacketWrapper const& packet, void* source) {
     }
 }
 
-void Manager::SendSettings(void* source) {
+void Manager::UpdateSettings(void* source) {
     PacketWrapper packet;
     auto& settings = *packet.mutable_settings();
     settings.set_horizontal(getConfig().Width.GetValue());
@@ -251,6 +250,7 @@ void Manager::SendSettings(void* source) {
     settings.set_micmix(getConfig().MixMode.GetValue());
     logger.debug("sending settings except to {}", source);
     Socket::Send(packet, source);
+    RestartCapture();  // at least for now, clients will always expect new video streams after receiving settings
 }
 
 bool Manager::IsCapturing() {
