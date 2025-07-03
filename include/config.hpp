@@ -30,6 +30,6 @@ DECLARE_CONFIG(Config) {
 
     CONFIG_VALUE(GameVolume, float, "Game Volume", 1, "The volume level of the game audio");
     CONFIG_VALUE(MicVolume, float, "Microphone Volume", 1, "The volume level of the microphone audio");
-    CONFIG_VALUE(MicThreshold, float, "Microphone Threshold", 0.5, "At what loudness should noises from the microphone be heard");
+    CONFIG_VALUE(MicThreshold, float, "Microphone Threshold", 1, "At what loudness should noises from the microphone be heard");
     CONFIG_VALUE(MixMode, int, "Mixing Mode", 1, "How to combine the microphone audio with the game audio");
 };

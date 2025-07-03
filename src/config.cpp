@@ -89,7 +89,7 @@ void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, 
         }
 
         getConfig().Port.SetValue(str);
-        Socket::Refresh(nullptr);
+        Socket::Refresh();
     });
 
     resolution = CreateEnumIncrement(settings, "Resolution", ResolutionStrings, 0, [](int value) {

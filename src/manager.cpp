@@ -135,6 +135,7 @@ void Manager::Init() {
         return;
 
     Socket::Init();
+    Socket::Start();
 
     getConfig().Mic.AddChangeEvent([](bool) { UpdateMic(); });
     getConfig().FPFC.AddChangeEvent([](bool val) {
@@ -172,7 +173,11 @@ void Manager::Update() {
 }
 
 void Manager::Invalidate() {
+    if (cameraStream)
+        UnityEngine::Object::DestroyImmediate(cameraStream->gameObject);
     cameraStream = nullptr;
+    if (audioStream)
+        UnityEngine::Object::DestroyImmediate(audioStream);
     audioStream = nullptr;
     waiting = capturing;
     capturing = false;
@@ -250,7 +255,7 @@ void Manager::UpdateSettings(void* source) {
     settings.set_micmix(getConfig().MixMode.GetValue());
     logger.debug("sending settings except to {}", source);
     Socket::Send(packet, source);
-    RestartCapture();  // at least for now, clients will always expect new video streams after receiving settings
+    RestartCapture();  // at least for now, clients will always expect new video streams after sending or receiving settings
 }
 
 bool Manager::IsCapturing() {
