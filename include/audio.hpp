@@ -26,4 +26,7 @@ DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour) {
     std::vector<float> gameBuffer;
     std::vector<float> micBuffer;
     std::shared_mutex mutex;
+
+    Hollywood::SimpleLimiter limiter;
+    bool initedLimiter = false;
 };

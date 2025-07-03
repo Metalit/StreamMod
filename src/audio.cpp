@@ -10,16 +10,6 @@ DEFINE_TYPE(StreamMod, AudioCapture);
 
 using namespace StreamMod;
 
-static void AddMix(std::vector<float>& base, std::vector<float>& add, int size) {
-    for (int i = 0; i < size; i++)
-        base[i] += add[i];
-}
-
-static void AvgMix(std::vector<float>& base, std::vector<float>& add, int size) {
-    for (int i = 0; i < size; i++)
-        base[i] = (base[i] + add[i]) / 2;
-}
-
 template <class T>
 static void ScaledInsert(T& mutex, std::vector<float>& buffer, ArrayW<float>& data, float volume) {
     std::shared_lock lock(mutex);
@@ -62,11 +52,15 @@ void AudioCapture::Update() {
         sampleRate = UnityEngine::AudioSettings::get_outputSampleRate();
     if (channels == -1 || sampleRate == -1)
         return;
+    if (!initedLimiter)
+        limiter.init(channels, sampleRate);
 
     std::unique_lock lock(mutex);
 
     if (!mic || micBuffer.empty()) {
         if (!gameBuffer.empty()) {
+            for (auto& data : gameBuffer)
+                data = limiter.process(data);
             callback(gameBuffer, sampleRate, channels);
             gameBuffer.clear();
         }
@@ -83,10 +77,12 @@ void AudioCapture::Update() {
             if (!hasMicData)
                 break;
         case 0:
-            AvgMix(gameBuffer, micBuffer, size);
+            for (int i = 0; i < size; i++)
+                gameBuffer[i] = limiter.process((gameBuffer[i] + micBuffer[i]) / 2);
             break;
         default:
-            AddMix(gameBuffer, micBuffer, size);
+            for (int i = 0; i < size; i++)
+                gameBuffer[i] = limiter.process(gameBuffer[i] + micBuffer[i]);
             break;
     }
     callback(std::span(gameBuffer).subspan(0, size), sampleRate, channels);
