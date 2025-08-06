@@ -7,11 +7,11 @@ let decoder: VideoDecoder | undefined;
 
 const isChrome = /chrom(e|ium)/.test(navigator.userAgent.toLowerCase());
 
-const config: VideoDecoderConfig = {
+const baseConfig: VideoDecoderConfig = {
   codec: "avc1.42000a",
   optimizeForLatency: true,
-  hardwareAcceleration: "prefer-hardware",
 };
+let supportedConfig: VideoDecoderConfig;
 
 const isKey = (data: Uint8Array) => data[4] === 101 || data[4] === 103;
 
@@ -55,13 +55,25 @@ const queue = (data: Uint8Array) => {
   feed();
 };
 
-VideoDecoder.isConfigSupported(config).then((support) => {
+const checkSupport = async (config: VideoDecoderConfig) => {
+  config.hardwareAcceleration = "prefer-hardware";
+  let support = await VideoDecoder.isConfigSupported(config);
   if (!support.supported) {
-    console.error("config unsupported!", support);
+    console.log("hardware accelerated decoding failed, trying software");
+    config.hardwareAcceleration = "prefer-software";
+    support = await VideoDecoder.isConfigSupported(config);
+  }
+  return support;
+};
+
+checkSupport(baseConfig).then((support) => {
+  if (!support.supported) {
+    console.error("video decoder config unsupported!", support);
     return;
   }
+  supportedConfig = support.config!;
   decoder = new VideoDecoder(init);
-  decoder.configure(config);
+  decoder.configure(supportedConfig);
   decoder.ondequeue = feed;
 });
 
@@ -72,7 +84,7 @@ const flush = () => {
   spsPacket = undefined;
   wroteSps = false;
   decoder?.reset();
-  decoder?.configure(config);
+  if (supportedConfig) decoder?.configure(supportedConfig);
 };
 
 self.onmessage = (event: MessageEvent) => {
