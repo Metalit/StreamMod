@@ -22,18 +22,28 @@ jobs:
           submodules: true
           lfs: true
 
-      - uses: seanmiddleditch/gha-setup-ninja@v3
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
 
-      - name: Create ndkpath.txt
+      - name: Configure CPM cache path
         run: |
-          echo "$ANDROID_NDK_LATEST_HOME" > ${GITHUB_WORKSPACE}/ndkpath.txt
-          cat ${GITHUB_WORKSPACE}/ndkpath.txt
+          echo "CPM_SOURCE_CACHE=$HOME/.cache/CPM" >> $GITHUB_ENV
+
+      - name: Cache CPM packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CPM_SOURCE_CACHE }}
+          key: ${{ runner.os }}-cpm-packages-${{ hashFiles('**/CMakeLists.txt', 'CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-cpm-packages-
+
+      - uses: seanmiddleditch/gha-setup-ninja@v3
 
       - name: QPM Action
         uses: Fernthedev/qpm-action@v1
         with:
           workflow_token: ${{ secrets.GITHUB_TOKEN }}
-
+          resolve_ndk: true
           restore: true
           cache: true
 
@@ -43,28 +53,6 @@ jobs:
           ls -la ${GITHUB_WORKSPACE}/extern/includes
           echo libs:
           ls -la ${GITHUB_WORKSPACE}/extern/libs
-
-      - name: Restore vcpkg_installed
-        id: cache-vcpkg-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: vcpkg_installed
-          key: ${{ runner.os }}-vcpkg_installed
-
-      - name: Create protobuf files
-        run: |
-          qpm s proto
-
-      - name: List protobuf files
-        run: |
-          ls -la ./protos_cpp
-
-      - name: Save vcpkg_installed
-        id: cache-vcpkg-save
-        uses: actions/cache/save@v4
-        with:
-          path: vcpkg_installed
-          key: ${{ steps.cache-vcpkg-restore.outputs.cache-primary-key }}
 
       - name: Build & create qmod
         run: |
