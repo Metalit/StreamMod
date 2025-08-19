@@ -19,6 +19,9 @@ extern/
 qpm_defines.cmake
 extern.cmake
 
+# CMake externs
+cmake_deps/
+
 # build stuff
 mod.json
 mod.json.schema
