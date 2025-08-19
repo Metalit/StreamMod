@@ -10,10 +10,6 @@ ndkpath.txt
 *.txt
 *.log
 
-# VCPKG stuff
-vcpkg_installed/
-protos_cpp/
-
 # QPM stuff
 extern/
 qpm_defines.cmake

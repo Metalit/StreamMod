@@ -67,6 +67,7 @@ jobs:
           pattern="lib${module_id}*.so"
           files=( $pattern )
           echo NAME="${files[0]}" >> $GITHUB_OUTPUT
+
       - name: Rename debug
         run: |
           mv ./build/debug/${{ steps.libname.outputs.NAME }} ./build/debug/debug_${{ steps.libname.outputs.NAME }}
