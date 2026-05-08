@@ -1,12 +1,13 @@
 #include "socket.hpp"
 
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
-
 #include "config.hpp"
 #include "main.hpp"
 #include "manager.hpp"
 #include "metacore/shared/unity.hpp"
+
+#include <shared_mutex>
+#include <websocketpp/config/asio_no_tls.hpp>
+#include <websocketpp/server.hpp>
 
 using namespace websocketpp;
 

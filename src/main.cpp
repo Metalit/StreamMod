@@ -1,5 +1,15 @@
 #include "main.hpp"
 
+#include "config.hpp"
+#include "fpfc.hpp"
+#include "hooks.hpp"
+#include "manager.hpp"
+#include "custom-types/shared/delegate.hpp"
+#include "custom-types/shared/register.hpp"
+#include "hollywood/shared/hollywood.hpp"
+#include "metacore/shared/delegates.hpp"
+#include "metacore/shared/unity.hpp"
+
 #include "GlobalNamespace/DeactivateVRControllersOnFocusCapture.hpp"
 #include "GlobalNamespace/MainCamera.hpp"
 #include "GlobalNamespace/OVRInput.hpp"
@@ -7,17 +17,6 @@
 #include "UnityEngine/SceneManagement/LoadSceneMode.hpp"
 #include "UnityEngine/SceneManagement/Scene.hpp"
 #include "UnityEngine/SceneManagement/SceneManager.hpp"
-#include "beatsaber-hook/shared/utils/hooking.hpp"
-#include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
-#include "config.hpp"
-#include "custom-types/shared/delegate.hpp"
-#include "custom-types/shared/register.hpp"
-#include "fpfc.hpp"
-#include "hollywood/shared/hollywood.hpp"
-#include "hooks.hpp"
-#include "manager.hpp"
-#include "metacore/shared/delegates.hpp"
-#include "metacore/shared/unity.hpp"
 
 #if __has_include("bsml/shared/BSML.hpp")
 #include "bsml/shared/BSML.hpp"
@@ -65,7 +64,6 @@ extern "C" void setup(CModInfo* info) {
 }
 
 extern "C" void late_load() {
-    il2cpp_functions::Init();
     custom_types::Register::AutoRegister();
 
 #if __has_include("bsml/shared/BSML.hpp")

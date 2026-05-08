@@ -1,11 +1,12 @@
 #include "mic.hpp"
 
+#include "config.hpp"
+#include "main.hpp"
+
 #include "UnityEngine/AudioClip.hpp"
 #include "UnityEngine/AudioRolloffMode.hpp"
 #include "UnityEngine/AudioSettings.hpp"
 #include "UnityEngine/GameObject.hpp"
-#include "config.hpp"
-#include "main.hpp"
 
 DEFINE_TYPE(StreamMod, MicCapture);
 
@@ -15,12 +16,12 @@ using namespace UnityEngine;
 static constexpr float LoudnessDecreasePerSecond = 5;
 
 static ArrayW<StringW> GetDevices() {
-    static auto icall = il2cpp_utils::resolve_icall<ArrayW<StringW>>("UnityEngine.Microphone::get_devices");
+    static auto icall = i2c::resolve_icall<ArrayW<StringW>>("UnityEngine.Microphone::get_devices");
     return icall();
 }
 
 static int GetMicrophoneDeviceIDFromName(StringW name) {
-    static auto icall = il2cpp_utils::resolve_icall<int, StringW>("UnityEngine.Microphone::GetMicrophoneDeviceIDFromName");
+    static auto icall = i2c::resolve_icall<int, StringW>("UnityEngine.Microphone::GetMicrophoneDeviceIDFromName");
     return icall(name);
 }
 
@@ -32,12 +33,12 @@ static int GetMicrophoneDeviceIDFromName(StringW name) {
 // }
 
 static AudioClip* StartRecord(int deviceId, bool loop, float lengthSec, int frequency) {
-    static auto icall = il2cpp_utils::resolve_icall<AudioClip*, int, bool, float, int>("UnityEngine.Microphone::StartRecord");
+    static auto icall = i2c::resolve_icall<AudioClip*, int, bool, float, int>("UnityEngine.Microphone::StartRecord");
     return icall(deviceId, loop, lengthSec, frequency);
 }
 
 static void EndRecord(int deviceId) {
-    static auto icall = il2cpp_utils::resolve_icall<void, int>("UnityEngine.Microphone::EndRecord");
+    static auto icall = i2c::resolve_icall<void, int>("UnityEngine.Microphone::EndRecord");
     icall(deviceId);
 }
 

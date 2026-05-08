@@ -1,18 +1,19 @@
 #include "config.hpp"
 
 #if __has_include("bsml/shared/BSML.hpp")
+#include "main.hpp"
+#include "manager.hpp"
+#include "socket.hpp"
+#include "bsml/shared/BSML-Lite.hpp"
+#include "metacore/shared/ui.hpp"
+
 #include "System/Net/Dns.hpp"
 #include "System/Net/IPAddress.hpp"
 #include "System/Net/IPHostEntry.hpp"
 #include "System/Net/Sockets/AddressFamily.hpp"
-#include "bsml/shared/BSML-Lite.hpp"
-#include "main.hpp"
-#include "manager.hpp"
-#include "metacore/shared/ui.hpp"
-#include "socket.hpp"
 
 static BSML::IncrementSetting* CreateEnumIncrement(
-    const BSML::Lite::TransformWrapper& parent,
+    BSML::Lite::TransformWrapper const& parent,
     std::string_view name,
     std::vector<std::string> const& enumStrings,
     int value,
@@ -143,11 +144,12 @@ void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, 
             Manager::UpdateSettings();
         });
 
-    micThreshold =
-        BSML::Lite::CreateSliderSetting(settings, "Mic Threshold", 0.1, getConfig().MicThreshold.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
+    micThreshold = BSML::Lite::CreateSliderSetting(
+        settings, "Mic Threshold", 0.1, getConfig().MicThreshold.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().MicThreshold.SetValue(value);
             Manager::UpdateSettings();
-        });
+        }
+    );
 
     mixMode = CreateEnumIncrement(settings, "Mic Mixing", MixModeStrings, 0, [](int value) {
         getConfig().MixMode.SetValue(value);

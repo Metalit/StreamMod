@@ -1,8 +1,8 @@
 #pragma once
 
-#include <functional>
-
 #include "stream.pb.h"
+
+#include <functional>
 
 namespace Socket {
     void Init();

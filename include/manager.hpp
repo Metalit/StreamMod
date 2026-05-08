@@ -1,9 +1,10 @@
 #pragma once
 
+#include "stream.pb.h"
+
 #include "UnityEngine/Camera.hpp"
 #include "UnityEngine/Quaternion.hpp"
 #include "UnityEngine/Vector3.hpp"
-#include "stream.pb.h"
 
 namespace Manager {
     void Init();

@@ -1,5 +1,15 @@
 #include "manager.hpp"
 
+#include "audio.hpp"
+#include "config.hpp"
+#include "fpfc.hpp"
+#include "main.hpp"
+#include "math.hpp"
+#include "socket.hpp"
+#include "hollywood/shared/hollywood.hpp"
+#include "metacore-bs/shared/input.hpp"
+#include "metacore/shared/unity.hpp"
+
 #include "GlobalNamespace/MainCamera.hpp"
 #include "GlobalNamespace/MainCameraCullingMask.hpp"
 #include "UnityEngine/AudioListener.hpp"
@@ -9,15 +19,6 @@
 #include "UnityEngine/StereoTargetEyeMask.hpp"
 #include "UnityEngine/Time.hpp"
 #include "UnityEngine/Transform.hpp"
-#include "audio.hpp"
-#include "config.hpp"
-#include "fpfc.hpp"
-#include "hollywood/shared/hollywood.hpp"
-#include "main.hpp"
-#include "math.hpp"
-#include "metacore/shared/input.hpp"
-#include "metacore/shared/unity.hpp"
-#include "socket.hpp"
 
 static bool initialized = false;
 
@@ -121,7 +122,7 @@ static void RefreshAudio() {
     logger.debug("refreshing audio capture");
     StopAudio();
     auto listeners = UnityEngine::Resources::FindObjectsOfTypeAll<UnityEngine::AudioListener*>();
-    auto listener = listeners->FirstOrDefault([](UnityEngine::AudioListener* l) { return l->isActiveAndEnabled; });
+    auto listener = listeners.front_or_default([](auto l) { return l->isActiveAndEnabled; });
     MakeAudio(listener);
 }
 

@@ -1,5 +1,11 @@
 #include "fpfc.hpp"
 
+#include "config.hpp"
+#include "hooks.hpp"
+#include "main.hpp"
+#include "manager.hpp"
+#include "metacore-bs/shared/input.hpp"
+
 #include "GlobalNamespace/FirstPersonFlyingController.hpp"
 #include "GlobalNamespace/OculusVRHelper.hpp"
 #include "GlobalNamespace/PauseController.hpp"
@@ -19,11 +25,7 @@
 #include "VRUIControls/MouseButtonEventData.hpp"
 #include "VRUIControls/MouseState.hpp"
 #include "VRUIControls/VRInputModule.hpp"
-#include "config.hpp"
-#include "hooks.hpp"
-#include "main.hpp"
-#include "manager.hpp"
-#include "metacore/shared/input.hpp"
+#include "VRUIControls/VRPointer.hpp"
 
 using namespace GlobalNamespace;
 using namespace UnityEngine;

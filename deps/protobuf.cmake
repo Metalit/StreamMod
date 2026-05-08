@@ -9,18 +9,14 @@ endif()
 # Build host `protoc` with native compiler and optional launchers
 include(ExternalProject)
 
-set(PROTOBUF_HOST_ARGS -DCMAKE_BUILD_TYPE=Release -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_INSTALL=OFF
-                       -Dprotobuf_BUILD_PROTOC_BINARIES=ON
-)
+set(PROTOBUF_HOST_ARGS -DCMAKE_BUILD_TYPE=Release -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_INSTALL=OFF -Dprotobuf_BUILD_PROTOC_BINARIES=ON)
 
 if(CMAKE_C_COMPILER_LAUNCHER)
     list(APPEND PROTOBUF_HOST_ARGS -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER})
 endif()
 
 if(CMAKE_CXX_COMPILER_LAUNCHER)
-    list(APPEND PROTOBUF_HOST_ARGS
-         -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}
-    )
+    list(APPEND PROTOBUF_HOST_ARGS -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER})
 endif()
 
 ExternalProject_Add(
@@ -43,10 +39,7 @@ set(HOST_PROTOC "${CMAKE_BINARY_DIR}/_deps/protobuf-host-build/protoc")
 
 # Restore toolchain
 if(_SAVED_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE
-        "${_SAVED_TOOLCHAIN_FILE}"
-        CACHE FILEPATH "Restored toolchain file" FORCE
-    )
+    set(CMAKE_TOOLCHAIN_FILE "${_SAVED_TOOLCHAIN_FILE}" CACHE FILEPATH "Restored toolchain file" FORCE)
 endif()
 
 cpmaddpackage(

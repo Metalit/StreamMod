@@ -1,10 +1,11 @@
 #include "audio.hpp"
 
-#include "UnityEngine/AudioSettings.hpp"
-#include "UnityEngine/GameObject.hpp"
 #include "config.hpp"
 #include "main.hpp"
 #include "mic.hpp"
+
+#include "UnityEngine/AudioSettings.hpp"
+#include "UnityEngine/GameObject.hpp"
 
 DEFINE_TYPE(StreamMod, AudioCapture);
 

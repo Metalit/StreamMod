@@ -1,2 +1,12 @@
 Diagnostics:
   UnusedIncludes: None
+---
+If:
+  PathMatch: ./extern/.*
+Index:
+  Background: Skip
+---
+If:
+  PathMatch: ./build/.*
+Index:
+  Background: Skip

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "HMUI/ViewController.hpp"
 #include "config-utils/shared/config-utils.hpp"
+
+#include "HMUI/ViewController.hpp"
 
 namespace Config {
     inline std::vector<std::pair<int, int>> const Resolutions = {{1280, 720}, {1920, 1080}, {2560, 1440}};

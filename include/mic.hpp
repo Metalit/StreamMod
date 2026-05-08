@@ -1,9 +1,10 @@
 #pragma once
 
+#include "custom-types/shared/macros.hpp"
+
 #include "UnityEngine/AudioClip.hpp"
 #include "UnityEngine/AudioSource.hpp"
 #include "UnityEngine/MonoBehaviour.hpp"
-#include "custom-types/shared/macros.hpp"
 
 DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
     DECLARE_DEFAULT_CTOR();
