@@ -12,7 +12,7 @@
 #include "socket.hpp"
 
 static BSML::IncrementSetting* CreateEnumIncrement(
-    const BSML::Lite::TransformWrapper& parent,
+    BSML::Lite::TransformWrapper const& parent,
     std::string_view name,
     std::vector<std::string> const& enumStrings,
     int value,
@@ -34,7 +34,7 @@ static void SetEnumIncrement(BSML::IncrementSetting* increment, std::vector<std:
     else if (value > enumStrings.size())
         value = enumStrings.size();
     increment->currentValue = value;
-    increment->text->text = value > 0 && value < enumStrings.size() ? enumStrings[value] : fallback;
+    increment->text->text = value >= 0 && value < enumStrings.size() ? enumStrings[value] : fallback;
     increment->decButton->interactable = value > 0;
     increment->incButton->interactable = value < enumStrings.size() - 1;
 }
@@ -143,11 +143,12 @@ void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, 
             Manager::UpdateSettings();
         });
 
-    micThreshold =
-        BSML::Lite::CreateSliderSetting(settings, "Mic Threshold", 0.1, getConfig().MicThreshold.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
+    micThreshold = BSML::Lite::CreateSliderSetting(
+        settings, "Mic Threshold", 0.1, getConfig().MicThreshold.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().MicThreshold.SetValue(value);
             Manager::UpdateSettings();
-        });
+        }
+    );
 
     mixMode = CreateEnumIncrement(settings, "Mic Mixing", MixModeStrings, 0, [](int value) {
         getConfig().MixMode.SetValue(value);
@@ -175,6 +176,7 @@ void Config::UpdateMenu() {
             break;
         }
     }
+    logger.debug("found resolution idx {} for {}/{}", idx, width, height);
     SetEnumIncrement(resolution, ResolutionStrings, idx, "Custom");
 
     bitrate->set_Value(getConfig().Bitrate.GetValue());
