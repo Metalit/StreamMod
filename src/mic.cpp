@@ -71,21 +71,9 @@ static int Resample(ArrayW<float> source, int position, ArrayW<float> target, in
         return target.size();
     }
 
+    // interpolate between samples
     float sampleRatio = sourceFrequency / (float) targetFrequency;
 
-    // simpler behavior for integer ratios (implies that the output needs less samples)
-    if (std::abs(sampleRatio - std::round(sampleRatio)) < 0.0001) {
-        int intSampleRatio = std::round(sampleRatio);
-        for (int i = 0; i < target.size(); i++) {
-            target[i] = source[position];
-            position += intSampleRatio;
-            if (position >= source.size())
-                position -= source.size();
-        }
-        return position;
-    }
-
-    // interpolate between samples
     float fpos = position;
     for (int i = 0; i < target.size(); i++) {
         fpos += sampleRatio;
@@ -97,6 +85,8 @@ static int Resample(ArrayW<float> source, int position, ArrayW<float> target, in
             upper -= source.size();
         target[i] = std::lerp(source[lower], source[upper], fpos - (int) fpos);
     }
+
+    // update position
     position = std::ceil(fpos);
     if (position >= source.size())
         position -= source.size();
@@ -110,7 +100,7 @@ static float GetLoudness(ArrayW<float> data) {
     for (int i = 0; i < data.size(); i++)
         sum += data[i] * data[i];
     // apply a boost to make 0-2 a good range (why so much? idk)
-    return sqrt(sum / data.size()) * getConfig().MicVolume.GetValue() * 100;
+    return sqrt(sum / data.size()) * 50;
 }
 
 void MicCapture::Init() {
@@ -140,6 +130,8 @@ void MicCapture::Init() {
         deviceId = -1;
         return;
     }
+
+    logger.debug("audio clip: {}/{}", audioClip->frequency, audioClip->channels);
 
     if (!micBuffer || micBuffer.size() != micSampleRate)
         micBuffer = ArrayW<float>(micSampleRate);
@@ -178,7 +170,7 @@ void MicCapture::Update() {
         bufferPos = Resample(micBuffer, bufferPos, fragmentBuffer, micSampleRate, outputSampleRate);
         float newLoudness = GetLoudness(fragmentBuffer);
         if (newLoudness < currentLoudness)
-            currentLoudness -= (LoudnessDecreasePerSecond * fragmentBuffer.size()) / (outputSampleRate);
+            currentLoudness -= (LoudnessDecreasePerSecond * fragmentBuffer.size()) / outputSampleRate;
         else
             currentLoudness = newLoudness;
         if (currentLoudness < 0)
@@ -191,12 +183,20 @@ void MicCapture::OnDestroy() {
     Stop();
 }
 
-MicCapture* MicCapture::Create() {
+void MicCapture::ClearCallback() {
+    callback = nullptr;
+}
+
+MicCapture* MicCapture::Create(std::function<void(ArrayW<float>)> callback) {
     static ConstString name("StreamingMicCapture");
+    MicCapture* capture;
     if (auto go = GameObject::Find(name))
-        return go->GetComponent<MicCapture*>();
-    auto go = GameObject::New_ctor(name);
-    Object::DontDestroyOnLoad(go);
-    auto ret = go->AddComponent<MicCapture*>();
-    return ret;
+        capture = go->GetComponent<MicCapture*>();
+    if (!capture) {
+        auto go = GameObject::New_ctor(name);
+        Object::DontDestroyOnLoad(go);
+        capture = go->AddComponent<MicCapture*>();
+    }
+    capture->callback = callback;
+    return capture;
 }

@@ -2,6 +2,7 @@
 
 #include "UnityEngine/AudioSettings.hpp"
 #include "UnityEngine/GameObject.hpp"
+#include "UnityEngine/Time.hpp"
 #include "config.hpp"
 #include "main.hpp"
 #include "mic.hpp"
@@ -9,6 +10,8 @@
 DEFINE_TYPE(StreamMod, AudioCapture);
 
 using namespace StreamMod;
+
+static constexpr float MicDuration = 0.5;
 
 template <class T>
 static void ScaledInsert(T& mutex, std::vector<float>& buffer, ArrayW<float>& data, float volume, int duplicates) {
@@ -24,17 +27,19 @@ void AudioCapture::SetMicCapture(bool enabled) {
     logger.debug("set mic {}", enabled);
     if (enabled) {
         if (!mic) {
-            mic = MicCapture::Create();
-            mic->callback = [this](ArrayW<float> data) {
+            mic = MicCapture::Create([this](ArrayW<float> data) {
                 if (channels == -1 || sampleRate == -1)
                     return;
-                bool overThreshold = mic->currentLoudness >= getConfig().MicThreshold.GetValue();
-                if (overThreshold)
-                    hasMicData = true;
+                hasMicData = mic->currentLoudness >= getConfig().MicThreshold.GetValue();
+                float time = UnityEngine::Time::get_time();
+                if (hasMicData)
+                    lastMicData = time;
+                else
+                    hasMicData = time - lastMicData < MicDuration;
                 // not sure why it's so quiet that I have to multiply it by 10
-                float volume = overThreshold ? getConfig().MicVolume.GetValue() * 10 : 0;
+                float volume = hasMicData ? getConfig().MicVolume.GetValue() * 10 : 0;
                 ScaledInsert(mutex, micBuffer, data, volume, channels);
-            };
+            });
         }
         mic->Init();
     } else if (mic)
@@ -73,24 +78,16 @@ void AudioCapture::Update() {
 
     int size = std::min(gameBuffer.size(), micBuffer.size());
 
-    switch (getConfig().MixMode.GetValue()) {
-        case 1:  // Duck
-            if (!hasMicData)
-                break;
-        case 0:  // Combine
-            for (int i = 0; i < size; i++)
-                gameBuffer[i] = limiter.process((gameBuffer[i] + micBuffer[i]) / 2);
-            break;
-        default:  // Add
-            for (int i = 0; i < size; i++)
-                gameBuffer[i] = limiter.process(gameBuffer[i] + micBuffer[i]);
-            break;
-    }
+    int micMix = getConfig().MixMode.GetValue();
+    // Combine, or Duck with mic data
+    int divisor = micMix == 0 || (micMix == 1 && hasMicData) ? 2 : 1;
+    for (int i = 0; i < size; i++)
+        gameBuffer[i] = limiter.process((gameBuffer[i] + micBuffer[i]) / divisor);
+
     callback(std::span(gameBuffer).subspan(0, size), sampleRate, channels);
 
     gameBuffer.erase(gameBuffer.begin(), gameBuffer.begin() + size);
     micBuffer.erase(micBuffer.begin(), micBuffer.begin() + size);
-    hasMicData = false;
 }
 
 void AudioCapture::OnDisable() {
@@ -100,6 +97,6 @@ void AudioCapture::OnDisable() {
 
 void AudioCapture::OnDestroy() {
     if (mic)
-        mic->callback = nullptr;
+        mic->ClearCallback();
     mic = nullptr;
 }

@@ -12,6 +12,7 @@ DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
     DECLARE_INSTANCE_METHOD(void, Stop);
     DECLARE_INSTANCE_METHOD(void, Update);
     DECLARE_INSTANCE_METHOD(void, OnDestroy);
+    DECLARE_INSTANCE_METHOD(void, ClearCallback);
 
     DECLARE_INSTANCE_FIELD_DEFAULT(int, outputSampleRate, -1);
     DECLARE_INSTANCE_FIELD_DEFAULT(int, micSampleRate, -1);
@@ -24,8 +25,9 @@ DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
     DECLARE_INSTANCE_FIELD(ArrayW<float>, micBuffer);
     DECLARE_INSTANCE_FIELD(UnityEngine::AudioClip*, audioClip);
 
-   public:
+   private:
     std::function<void(ArrayW<float>)> callback;
 
-    static MicCapture* Create();
+   public:
+    static MicCapture* Create(std::function<void(ArrayW<float>)> callback);
 };

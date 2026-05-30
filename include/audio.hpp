@@ -18,6 +18,7 @@ DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour) {
     DECLARE_INSTANCE_FIELD_DEFAULT(int, channels, -1);
     DECLARE_INSTANCE_FIELD_DEFAULT(MicCapture*, mic, nullptr);
     DECLARE_INSTANCE_FIELD_DEFAULT(bool, hasMicData, false);
+    DECLARE_INSTANCE_FIELD_DEFAULT(float, lastMicData, 0);
 
    public:
     std::function<void(std::span<float>, int, int)> callback;
