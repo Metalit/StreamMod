@@ -74,14 +74,14 @@ void AudioCapture::Update() {
     int size = std::min(gameBuffer.size(), micBuffer.size());
 
     switch (getConfig().MixMode.GetValue()) {
-        case 1:
+        case 1:  // Duck
             if (!hasMicData)
                 break;
-        case 0:
+        case 0:  // Combine
             for (int i = 0; i < size; i++)
                 gameBuffer[i] = limiter.process((gameBuffer[i] + micBuffer[i]) / 2);
             break;
-        default:
+        default:  // Add
             for (int i = 0; i < size; i++)
                 gameBuffer[i] = limiter.process(gameBuffer[i] + micBuffer[i]);
             break;
