@@ -70,7 +70,6 @@ static void MakeCamera(UnityEngine::Camera* main) {
 
     cameraStream = camera->gameObject->AddComponent<Hollywood::CameraCapture*>();
     cameraStream->onOutputUnit = [](uint8_t* data, size_t length) {
-        static int frameIdx = 0;
         PacketWrapper packet;
         auto& video = *packet.mutable_videoframe();
         *video.mutable_data() = {(char*) data, length};

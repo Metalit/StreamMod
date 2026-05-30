@@ -11,11 +11,13 @@ DEFINE_TYPE(StreamMod, AudioCapture);
 using namespace StreamMod;
 
 template <class T>
-static void ScaledInsert(T& mutex, std::vector<float>& buffer, ArrayW<float>& data, float volume) {
+static void ScaledInsert(T& mutex, std::vector<float>& buffer, ArrayW<float>& data, float volume, int duplicates) {
     std::shared_lock lock(mutex);
-    buffer.reserve(buffer.size() + data.size());
-    for (float sample : data)
-        buffer.emplace_back(sample * volume);
+    buffer.reserve(buffer.size() + data.size() * duplicates);
+    for (float sample : data) {
+        for (int i = 0; i < duplicates; i++)
+            buffer.emplace_back(sample * volume);
+    }
 }
 
 void AudioCapture::SetMicCapture(bool enabled) {
@@ -30,9 +32,8 @@ void AudioCapture::SetMicCapture(bool enabled) {
                 if (overThreshold)
                     hasMicData = true;
                 // not sure why it's so quiet that I have to multiply it by 10
-                // audioSource volume doesn't seem to matter, at least above 1
                 float volume = overThreshold ? getConfig().MicVolume.GetValue() * 10 : 0;
-                ScaledInsert(mutex, micBuffer, data, volume);
+                ScaledInsert(mutex, micBuffer, data, volume, channels);
             };
         }
         mic->Init();
@@ -44,7 +45,7 @@ void AudioCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
     channels = audioChannels;
     if (sampleRate == -1)
         return;  // can't get it on this thread
-    ScaledInsert(mutex, gameBuffer, data, getConfig().GameVolume.GetValue());
+    ScaledInsert(mutex, gameBuffer, data, getConfig().GameVolume.GetValue(), 1);
 }
 
 void AudioCapture::Update() {
@@ -67,8 +68,8 @@ void AudioCapture::Update() {
         return;
     }
 
-    if (mic->channels != -1 && mic->sampleRate != -1 && (mic->channels != channels || mic->sampleRate != sampleRate))
-        logger.warn("mismatch in reported config! mic: {}/{}, game: {}/{}", mic->channels, mic->sampleRate, channels, sampleRate);
+    if (mic->outputSampleRate != -1 && mic->outputSampleRate != sampleRate)
+        logger.warn("mismatch in reported sample rate! mic: {}, game: {}", mic->outputSampleRate, sampleRate);
 
     int size = std::min(gameBuffer.size(), micBuffer.size());
 
