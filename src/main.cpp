@@ -39,7 +39,7 @@ MAKE_AUTO_HOOK_MATCH(
 ) {
     DeactivateVRControllersOnFocusCapture_UpdateVRControllerActiveState(self);
 
-    if (Manager::IsCapturing() && getConfig().FPFC.GetValue()) {
+    if (Manager::IsCapturing() && getConfig().CameraMode.GetValue() == 2) {
         for (auto controller : self->_vrControllerGameObjects)
             controller->active = true;
     }

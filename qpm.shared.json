@@ -98,30 +98,15 @@
         "id": "bsml",
         "versionRange": "^0.4.55",
         "additionalData": {}
+      },
+      {
+        "id": "camera-utils",
+        "versionRange": "^1.1.11",
+        "additionalData": {}
       }
     ]
   },
   "restoredDependencies": [
-    {
-      "dependency": {
-        "id": "custom-types",
-        "versionRange": "=0.18.4",
-        "additionalData": {
-          "soLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/libcustom-types.so",
-          "debugSoLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/debug_libcustom-types.so",
-          "overrideSoName": "libcustom-types.so",
-          "modLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/CustomTypes.qmod",
-          "branchName": "version/v0_18_4",
-          "compileOptions": {
-            "cppFlags": [
-              "-Wno-invalid-offsetof"
-            ]
-          },
-          "cmake": true
-        }
-      },
-      "version": "0.18.4"
-    },
     {
       "dependency": {
         "id": "bs-cordl",
@@ -148,48 +133,17 @@
     },
     {
       "dependency": {
-        "id": "paper2_scotland2",
-        "versionRange": "=4.7.0",
-        "additionalData": {
-          "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/libpaper2_scotland2.so",
-          "overrideSoName": "libpaper2_scotland2.so",
-          "modLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/paper2_scotland2.qmod",
-          "branchName": "version/v4_7_0",
-          "compileOptions": {
-            "systemIncludes": [
-              "shared/utfcpp/source"
-            ]
-          },
-          "cmake": false
-        }
-      },
-      "version": "4.7.0"
-    },
-    {
-      "dependency": {
         "id": "metacore",
-        "versionRange": "=1.6.2",
+        "versionRange": "=1.6.3",
         "additionalData": {
-          "soLink": "https://github.com/Metalit/MetaCore/releases/download/v1.6.2/libmetacore.so",
+          "soLink": "https://github.com/Metalit/MetaCore/releases/download/v1.6.3/libmetacore.so",
           "overrideSoName": "libmetacore.so",
-          "modLink": "https://github.com/Metalit/MetaCore/releases/download/v1.6.2/MetaCore.qmod",
-          "branchName": "version/v1_6_2",
+          "modLink": "https://github.com/Metalit/MetaCore/releases/download/v1.6.3/MetaCore.qmod",
+          "branchName": "version/v1_6_3",
           "cmake": true
         }
       },
-      "version": "1.6.2"
-    },
-    {
-      "dependency": {
-        "id": "rapidjson-macros",
-        "versionRange": "=2.1.0",
-        "additionalData": {
-          "headersOnly": true,
-          "branchName": "version/v2_1_0",
-          "cmake": false
-        }
-      },
-      "version": "2.1.0"
+      "version": "1.6.3"
     },
     {
       "dependency": {
@@ -205,20 +159,6 @@
         }
       },
       "version": "10.0.0"
-    },
-    {
-      "dependency": {
-        "id": "config-utils",
-        "versionRange": "=2.0.3",
-        "additionalData": {
-          "headersOnly": true,
-          "soLink": "https://github.com/darknight1050/config-utils/releases/download/v2.0.3/libconfig-utils_test.so",
-          "overrideSoName": "libconfig-utils_test.so",
-          "branchName": "version/v2_0_3",
-          "cmake": true
-        }
-      },
-      "version": "2.0.3"
     },
     {
       "dependency": {
@@ -238,6 +178,114 @@
         }
       },
       "version": "11.0.2"
+    },
+    {
+      "dependency": {
+        "id": "libil2cpp",
+        "versionRange": "=0.4.0",
+        "additionalData": {
+          "headersOnly": true,
+          "compileOptions": {
+            "systemIncludes": [
+              "il2cpp/external/baselib/Include",
+              "il2cpp/external/baselib/Platforms/Android/Include"
+            ]
+          }
+        }
+      },
+      "version": "0.4.0"
+    },
+    {
+      "dependency": {
+        "id": "scotland2",
+        "versionRange": "=0.1.7",
+        "additionalData": {
+          "soLink": "https://github.com/sc2ad/scotland2/releases/download/v0.1.7/libsl2.so",
+          "debugSoLink": "https://github.com/sc2ad/scotland2/releases/download/v0.1.7/debug_libsl2.so",
+          "overrideSoName": "libsl2.so",
+          "branchName": "version/v0_1_7"
+        }
+      },
+      "version": "0.1.7"
+    },
+    {
+      "dependency": {
+        "id": "camera-utils",
+        "versionRange": "=1.1.11",
+        "additionalData": {
+          "soLink": "https://github.com/Reezonate/CameraUtils-Quest/releases/download/v1.1.11/libcamera-utils.so",
+          "debugSoLink": "https://github.com/Reezonate/CameraUtils-Quest/releases/download/v1.1.11/debug_libcamera-utils.so",
+          "overrideSoName": "libcamera-utils.so",
+          "modLink": "https://github.com/Reezonate/CameraUtils-Quest/releases/download/v1.1.11/CameraUtils.qmod",
+          "branchName": "version/v1_1_11"
+        }
+      },
+      "version": "1.1.11"
+    },
+    {
+      "dependency": {
+        "id": "custom-types",
+        "versionRange": "=0.18.4",
+        "additionalData": {
+          "soLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/libcustom-types.so",
+          "debugSoLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/debug_libcustom-types.so",
+          "overrideSoName": "libcustom-types.so",
+          "modLink": "https://github.com/QuestPackageManager/Il2CppQuestTypePatching/releases/download/v0.18.4/CustomTypes.qmod",
+          "branchName": "version/v0_18_4",
+          "compileOptions": {
+            "cppFlags": [
+              "-Wno-invalid-offsetof"
+            ]
+          },
+          "cmake": true
+        }
+      },
+      "version": "0.18.4"
+    },
+    {
+      "dependency": {
+        "id": "paper2_scotland2",
+        "versionRange": "=4.7.0",
+        "additionalData": {
+          "soLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/libpaper2_scotland2.so",
+          "overrideSoName": "libpaper2_scotland2.so",
+          "modLink": "https://github.com/Fernthedev/paperlog/releases/download/v4.7.0/paper2_scotland2.qmod",
+          "branchName": "version/v4_7_0",
+          "compileOptions": {
+            "systemIncludes": [
+              "shared/utfcpp/source"
+            ]
+          },
+          "cmake": false
+        }
+      },
+      "version": "4.7.0"
+    },
+    {
+      "dependency": {
+        "id": "rapidjson-macros",
+        "versionRange": "=2.1.0",
+        "additionalData": {
+          "headersOnly": true,
+          "branchName": "version/v2_1_0",
+          "cmake": false
+        }
+      },
+      "version": "2.1.0"
+    },
+    {
+      "dependency": {
+        "id": "config-utils",
+        "versionRange": "=2.0.3",
+        "additionalData": {
+          "headersOnly": true,
+          "soLink": "https://github.com/darknight1050/config-utils/releases/download/v2.0.3/libconfig-utils_test.so",
+          "overrideSoName": "libconfig-utils_test.so",
+          "branchName": "version/v2_0_3",
+          "cmake": true
+        }
+      },
+      "version": "2.0.3"
     },
     {
       "dependency": {
@@ -276,19 +324,6 @@
     },
     {
       "dependency": {
-        "id": "scotland2",
-        "versionRange": "=0.1.6",
-        "additionalData": {
-          "soLink": "https://github.com/sc2ad/scotland2/releases/download/v0.1.6/libsl2.so",
-          "debugSoLink": "https://github.com/sc2ad/scotland2/releases/download/v0.1.6/debug_libsl2.so",
-          "overrideSoName": "libsl2.so",
-          "branchName": "version/v0_1_6"
-        }
-      },
-      "version": "0.1.6"
-    },
-    {
-      "dependency": {
         "id": "hollywood",
         "versionRange": "=1.2.2",
         "additionalData": {
@@ -299,22 +334,6 @@
         }
       },
       "version": "1.2.2"
-    },
-    {
-      "dependency": {
-        "id": "libil2cpp",
-        "versionRange": "=0.4.0",
-        "additionalData": {
-          "headersOnly": true,
-          "compileOptions": {
-            "systemIncludes": [
-              "il2cpp/external/baselib/Include",
-              "il2cpp/external/baselib/Platforms/Android/Include"
-            ]
-          }
-        }
-      },
-      "version": "0.4.0"
     }
   ]
 }

@@ -5,7 +5,7 @@
 
 // all credit to @fern [https://github.com/Fernthedev/]
 
-static float ExpoEaseInOut(float t, float b, float c, float d) {
+constexpr float ExpoEaseInOut(float t, float b, float c, float d) {
     if (t == 0)
         return b;
     if (t == d)
@@ -15,16 +15,16 @@ static float ExpoEaseInOut(float t, float b, float c, float d) {
     return c / 2 * (-(float) std::pow(2, -10 * --t) + 2) + b;
 }
 
-static float EasedLerp(float from, float to, float time, float deltaTime) {
+constexpr float EasedLerp(float from, float to, float time, float deltaTime) {
     return ExpoEaseInOut(time, from, to - from, deltaTime);
 }
 
 // This will make it so big movements are actually exponentially bigger while smaller ones are less
-static UnityEngine::Vector3 EaseLerp(UnityEngine::Vector3 a, UnityEngine::Vector3 b, float time, float deltaTime) {
+constexpr UnityEngine::Vector3 EaseLerp(UnityEngine::Vector3 a, UnityEngine::Vector3 b, float time, float deltaTime) {
     return {EasedLerp(a.x, b.x, time, deltaTime), EasedLerp(a.y, b.y, time, deltaTime), EasedLerp(a.z, b.z, time, deltaTime)};
 }
 
-static UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, UnityEngine::Quaternion quaternion2, float amount) {
+constexpr UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, UnityEngine::Quaternion quaternion2, float amount) {
     float num = quaternion1.x * quaternion2.x + quaternion1.y * quaternion2.y + quaternion1.z * quaternion2.z + quaternion1.w * quaternion2.w;
     bool flag = false;
     if (num < 0) {
@@ -48,4 +48,13 @@ static UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, UnityE
     result.z = num2 * quaternion1.z + num3 * quaternion2.z;
     result.w = num2 * quaternion1.w + num3 * quaternion2.w;
     return result;
+}
+
+constexpr UnityEngine::Quaternion QuaternionMultiply(UnityEngine::Quaternion const& lhs, UnityEngine::Quaternion const& rhs) {
+    return UnityEngine::Quaternion(
+        lhs.w * rhs.x + lhs.x * rhs.w + lhs.y * rhs.z - lhs.z * rhs.y,
+        lhs.w * rhs.y + lhs.y * rhs.w + lhs.z * rhs.x - lhs.x * rhs.z,
+        lhs.w * rhs.z + lhs.z * rhs.w + lhs.x * rhs.y - lhs.y * rhs.x,
+        lhs.w * rhs.w - lhs.x * rhs.x - lhs.y * rhs.y - lhs.z * rhs.z
+    );
 }

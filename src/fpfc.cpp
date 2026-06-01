@@ -39,7 +39,7 @@ static UnityEngine::Quaternion rotation;
 static HMUI::UIKeyboard* keyboardOpen;
 
 static inline bool CapturingFPFC() {
-    return Manager::IsCapturing() && getConfig().FPFC.GetValue();
+    return Manager::IsCapturing() && getConfig().CameraMode.GetValue() == 2;
 }
 
 static GameObject* GetPauseMenu() {

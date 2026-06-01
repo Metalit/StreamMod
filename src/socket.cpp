@@ -20,7 +20,12 @@ static void OpenHandler(connection_hdl connection) {
     logger.info("connected: {}", connection.lock().get());
     std::unique_lock lock(connectionsMutex);
     connections.emplace(connection);
-    MetaCore::Engine::ScheduleMainThread([]() { Manager::UpdateSettings(); });
+    MetaCore::Engine::ScheduleMainThread([]() {
+        Manager::UpdateVideoSettings();
+        Manager::UpdateAudioSettings();
+        Manager::UpdateCameraSettings();
+        Manager::UpdateAudioConfig();
+    });
 }
 
 static void CloseHandler(connection_hdl connection) {

@@ -98,13 +98,13 @@ void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, 
         auto const& [width, height] = Resolutions[value];
         getConfig().Width.SetValue(width);
         getConfig().Height.SetValue(height);
-        Manager::UpdateSettings();
+        Manager::UpdateVideoSettings();
     });
 
     bitrate =
         BSML::Lite::CreateSliderSetting(settings, "Bitrate", 1000, getConfig().Bitrate.GetValue(), 1000, 20000, 0.5, true, {0, 0}, [](float value) {
             getConfig().Bitrate.SetValue(value);
-            Manager::UpdateSettings();
+            Manager::UpdateVideoSettings();
         });
     bitrate->formatter = [](float value) {
         return fmt::format("{} kbps", (int) value);
@@ -112,47 +112,47 @@ void Config::CreateMenu(HMUI::ViewController* self, bool firstActivation, bool, 
 
     fps = BSML::Lite::CreateSliderSetting(settings, "FPS", 5, getConfig().FPS.GetValue(), 10, 90, 0.5, true, {0, 0}, [](float value) {
         getConfig().FPS.SetValue(value);
-        Manager::UpdateSettings();
+        Manager::UpdateCameraSettings();
     });
 
     fov = BSML::Lite::CreateSliderSetting(settings, "FOV", 1, getConfig().FOV.GetValue(), 50, 100, 0.5, true, {0, 0}, [](float value) {
         getConfig().FOV.SetValue(value);
-        Manager::UpdateSettings();
+        Manager::UpdateCameraSettings();
     });
 
     smoothness =
         BSML::Lite::CreateSliderSetting(settings, "Smoothness", 0.1, getConfig().Smoothing.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().Smoothing.SetValue(value);
-            Manager::UpdateSettings();
+            Manager::UpdateCameraSettings();
         });
 
     mic = BSML::Lite::CreateToggle(settings, "Enable Mic", getConfig().Mic.GetValue(), [](bool value) {
         getConfig().Mic.SetValue(value);
-        Manager::UpdateSettings();
+        Manager::UpdateAudioSettings();
     });
 
     gameVolume =
         BSML::Lite::CreateSliderSetting(settings, "Game Volume", 0.1, getConfig().GameVolume.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().GameVolume.SetValue(value);
-            Manager::UpdateSettings();
+            Manager::UpdateAudioSettings();
         });
 
     micVolume =
         BSML::Lite::CreateSliderSetting(settings, "Mic Volume", 0.1, getConfig().MicVolume.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().MicVolume.SetValue(value);
-            Manager::UpdateSettings();
+            Manager::UpdateAudioSettings();
         });
 
     micThreshold = BSML::Lite::CreateSliderSetting(
         settings, "Mic Threshold", 0.1, getConfig().MicThreshold.GetValue(), 0, 2, 0.5, true, {0, 0}, [](float value) {
             getConfig().MicThreshold.SetValue(value);
-            Manager::UpdateSettings();
+            Manager::UpdateAudioSettings();
         }
     );
 
     mixMode = CreateEnumIncrement(settings, "Mic Mixing", MixModeStrings, 0, [](int value) {
         getConfig().MixMode.SetValue(value);
-        Manager::UpdateSettings();
+        Manager::UpdateAudioSettings();
     });
 
     init = true;

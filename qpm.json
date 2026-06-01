@@ -97,6 +97,11 @@
       "id": "bsml",
       "versionRange": "^0.4.55",
       "additionalData": {}
+    },
+    {
+      "id": "camera-utils",
+      "versionRange": "^1.1.11",
+      "additionalData": {}
     }
   ]
 }

@@ -1,21 +1,67 @@
 syntax = "proto3";
 
-message Settings {
+message VideoSettings {
     uint32 horizontal = 1;
     uint32 vertical = 2;
     uint32 bitrate = 3; // in kbps
-    float fps = 4;
-    float fov = 5;
+}
 
-    bool mic = 6;
-    float smoothness = 7;
+message AudioSettings {
+    enum MicMix {
+        Combine = 0;
+        Duck = 1;
+        Add = 2;
+    }
 
-    bool fpfc = 8;
+    float gameVolume = 1;
+    bool mic = 2;
+    float micVolume = 3;
+    float micThreshold = 4;
+    MicMix micMix = 5;
+}
 
-    float gameVolume = 9;
-    float micVolume = 10;
-    float micThreshold = 11;
-    uint32 micMix = 12;
+message CameraSettings {
+    message Position {
+        enum CameraMode {
+            Smooth = 0;
+            ThirdPer = 1;
+            FPFC = 2;
+        }
+
+        message Vector3 {
+            float x = 1;
+            float y = 2;
+            float z = 3;
+        }
+
+        CameraMode cameraMode = 1;
+        Vector3 position = 2;
+        Vector3 rotation = 3;
+        // Below only for Smooth
+        float smoothness = 4;
+        float tilt = 5;
+    }
+
+    message Visibility {
+        enum ShowMode {
+            Normal = 0;
+            Hidden = 1;
+            // No cores for walls, no debris for notes
+            Reduced = 2;
+        }
+
+        ShowMode notes = 1;
+        ShowMode walls = 2;
+        bool avatar = 3;
+        bool ui = 4;
+        bool cutParticles = 5;
+    }
+
+    Position position = 1;
+    Visibility visibility = 2;
+    float fps = 3;
+    float fov = 4;
+    bool orthographic = 5;
 }
 
 message VideoFrame {
@@ -23,11 +69,14 @@ message VideoFrame {
     uint64 time = 2;
 }
 
+message AudioConfig {
+    uint32 sampleRate = 1;
+    uint32 channels = 2;
+}
+
 message AudioFrame {
-    uint32 channels = 1;
-    uint32 sampleRate = 2;
-    repeated float data = 3;
-    uint64 time = 4;
+    repeated float data = 1;
+    uint64 time = 2;
 }
 
 message Input {
@@ -42,9 +91,12 @@ message Input {
 
 message PacketWrapper {
     oneof Packet {
-        Settings settings = 1;
-        VideoFrame videoFrame = 2;
-        AudioFrame audioFrame = 3;
-        Input input = 4;
+        VideoSettings videoSettings = 1;
+        AudioSettings audioSettings = 2;
+        CameraSettings cameraSettings = 3;
+        VideoFrame videoFrame = 4;
+        AudioConfig audioConfig = 5;
+        AudioFrame audioFrame = 6;
+        Input input = 7;
     }
 }
