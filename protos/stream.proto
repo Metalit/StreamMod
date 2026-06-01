@@ -37,9 +37,9 @@ message CameraSettings {
         CameraMode cameraMode = 1;
         Vector3 position = 2;
         Vector3 rotation = 3;
-        // Below only for Smooth
-        float smoothness = 4;
-        float tilt = 5;
+        Vector3 offset = 4;
+        Vector3 rotationOffset = 5;
+        float smoothness = 6;
     }
 
     message Visibility {

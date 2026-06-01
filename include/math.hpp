@@ -5,7 +5,7 @@
 
 // all credit to @fern [https://github.com/Fernthedev/]
 
-constexpr float ExpoEaseInOut(float t, float b, float c, float d) {
+constexpr inline float ExpoEaseInOut(float t, float b, float c, float d) {
     if (t == 0)
         return b;
     if (t == d)
@@ -15,16 +15,16 @@ constexpr float ExpoEaseInOut(float t, float b, float c, float d) {
     return c / 2 * (-(float) std::pow(2, -10 * --t) + 2) + b;
 }
 
-constexpr float EasedLerp(float from, float to, float time, float deltaTime) {
+constexpr inline float EasedLerp(float from, float to, float time, float deltaTime) {
     return ExpoEaseInOut(time, from, to - from, deltaTime);
 }
 
 // This will make it so big movements are actually exponentially bigger while smaller ones are less
-constexpr UnityEngine::Vector3 EaseLerp(UnityEngine::Vector3 a, UnityEngine::Vector3 b, float time, float deltaTime) {
+constexpr inline UnityEngine::Vector3 EaseLerp(UnityEngine::Vector3 a, UnityEngine::Vector3 b, float time, float deltaTime) {
     return {EasedLerp(a.x, b.x, time, deltaTime), EasedLerp(a.y, b.y, time, deltaTime), EasedLerp(a.z, b.z, time, deltaTime)};
 }
 
-constexpr UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, UnityEngine::Quaternion quaternion2, float amount) {
+constexpr inline UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, UnityEngine::Quaternion quaternion2, float amount) {
     float num = quaternion1.x * quaternion2.x + quaternion1.y * quaternion2.y + quaternion1.z * quaternion2.z + quaternion1.w * quaternion2.w;
     bool flag = false;
     if (num < 0) {
@@ -50,11 +50,35 @@ constexpr UnityEngine::Quaternion Slerp(UnityEngine::Quaternion quaternion1, Uni
     return result;
 }
 
-constexpr UnityEngine::Quaternion QuaternionMultiply(UnityEngine::Quaternion const& lhs, UnityEngine::Quaternion const& rhs) {
+constexpr inline UnityEngine::Quaternion operator*(UnityEngine::Quaternion const& lhs, UnityEngine::Quaternion const& rhs) {
     return UnityEngine::Quaternion(
         lhs.w * rhs.x + lhs.x * rhs.w + lhs.y * rhs.z - lhs.z * rhs.y,
         lhs.w * rhs.y + lhs.y * rhs.w + lhs.z * rhs.x - lhs.x * rhs.z,
         lhs.w * rhs.z + lhs.z * rhs.w + lhs.x * rhs.y - lhs.y * rhs.x,
         lhs.w * rhs.w - lhs.x * rhs.x - lhs.y * rhs.y - lhs.z * rhs.z
     );
+}
+
+constexpr inline UnityEngine::Vector3 operator*(UnityEngine::Quaternion const& lhs, UnityEngine::Vector3 const& rhs) {
+    float num = lhs.x * 2.0f;
+    float num2 = lhs.y * 2.0f;
+    float num3 = lhs.z * 2.0f;
+    float num4 = lhs.x * num;
+    float num5 = lhs.y * num2;
+    float num6 = lhs.z * num3;
+    float num7 = lhs.x * num2;
+    float num8 = lhs.x * num3;
+    float num9 = lhs.y * num3;
+    float num10 = lhs.w * num;
+    float num11 = lhs.w * num2;
+    float num12 = lhs.w * num3;
+    return UnityEngine::Vector3(
+        (1.0f - (num5 + num6)) * rhs.x + (num7 - num12) * rhs.y + (num8 + num11) * rhs.z,
+        (num7 + num12) * rhs.x + (1.0f - (num4 + num6)) * rhs.y + (num9 - num10) * rhs.z,
+        (num8 - num11) * rhs.x + (num9 + num10) * rhs.y + (1.0f - (num4 + num5)) * rhs.z
+    );
+}
+
+constexpr inline UnityEngine::Vector3 operator+(UnityEngine::Vector3 const& lhs, UnityEngine::Vector3 const& rhs) {
+    return UnityEngine::Vector3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 }

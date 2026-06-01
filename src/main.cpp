@@ -18,6 +18,7 @@
 #include "manager.hpp"
 #include "metacore/shared/delegates.hpp"
 #include "metacore/shared/unity.hpp"
+#include "settings.hpp"
 
 #if __has_include("bsml/shared/BSML.hpp")
 #include "bsml/shared/BSML.hpp"
@@ -69,16 +70,14 @@ extern "C" void late_load() {
     custom_types::Register::AutoRegister();
 
 #if __has_include("bsml/shared/BSML.hpp")
-    BSML::Register::RegisterSettingsMenu("Streamer", &Config::CreateMenu, false);
-    BSML::Events::onGameDidRestart.addCallback(&Config::Invalidate);
+    BSML::Register::RegisterSettingsMenu<StreamMod::Settings*>("Stream Mod");
     BSML::Events::onGameDidRestart.addCallback(&Manager::Invalidate);
 #endif
 
     namespace Scenes = UnityEngine::SceneManagement;
+    Scenes::SceneManager::add_sceneLoaded(MetaCore::Delegates::MakeUnityAction([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); }));
 
     MetaCore::Engine::ScheduleOnUpdate(Manager::Update);
-
-    Scenes::SceneManager::add_sceneLoaded(MetaCore::Delegates::MakeUnityAction([](Scenes::Scene, Scenes::LoadSceneMode) { FPFC::OnSceneChange(); }));
 
     Hooks::Install();
 }

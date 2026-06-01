@@ -20,6 +20,7 @@
 #include "math.hpp"
 #include "metacore/shared/input.hpp"
 #include "metacore/shared/unity.hpp"
+#include "settings.hpp"
 #include "socket.hpp"
 
 static bool initialized = false;
@@ -33,16 +34,11 @@ static bool capturing = false;
 
 static UnityEngine::Vector3 smoothPosition;
 static UnityEngine::Quaternion smoothRotation;
+static UnityEngine::Vector3 positionOffset;
+static UnityEngine::Quaternion rotationOffset;
 
 static inline uint64_t Time() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-static UnityEngine::Quaternion ApplyTilt(UnityEngine::Quaternion const& rotation, float tilt) {
-    if (tilt == 0)
-        return rotation;
-    // rotate on local x axis
-    return QuaternionMultiply(rotation, UnityEngine::Quaternion::Euler({tilt, 0, 0}));
 }
 
 static int ApplyEnumMask(int mask, int value, int layer, int extra) {
@@ -177,13 +173,16 @@ static void UpdateCamera() {
         return;
     auto camera = cameraStream->GetComponent<UnityEngine::Camera*>();
     if (mode == 0) {
+        positionOffset = getConfig().SmoothCameraPos.GetValue();
+        rotationOffset = UnityEngine::Quaternion::Euler(getConfig().SmoothCameraRot.GetValue());
         auto pose = MetaCore::Input::GetHeadPose();
-        smoothPosition = pose.position;
+        smoothPosition = pose.position + positionOffset;
         smoothRotation = pose.rotation;
-    } else if (mode == 1)
-        cameraStream->transform->SetPositionAndRotation(
-            getConfig().CameraPos.GetValue(), UnityEngine::Quaternion::Euler(getConfig().CameraRot.GetValue())
-        );
+    } else if (mode == 1) {
+        positionOffset = getConfig().CameraPos.GetValue();
+        rotationOffset = UnityEngine::Quaternion::Euler(getConfig().CameraRot.GetValue());
+        cameraStream->transform->SetPositionAndRotation(positionOffset, rotationOffset);
+    }
     int mask = camera->cullingMask;
     mask = ApplyEnumMask(mask, getConfig().NoteVisibility.GetValue(), CameraUtils::VL_Note, CameraUtils::VL_NoteDebris);
     // VL_FixMRAlpha is also used for wall cores in Camera2
@@ -218,10 +217,6 @@ void Manager::Update() {
         return;
     switch (getConfig().CameraMode.GetValue()) {
         case 1:
-            // todo: every frame is unnecessary
-            cameraStream->transform->SetPositionAndRotation(
-                getConfig().CameraPos.GetValue(), UnityEngine::Quaternion::Euler(getConfig().CameraRot.GetValue())
-            );
             break;
         case 2:
             cameraStream->transform->rotation = FPFC::GetRotation();
@@ -231,15 +226,16 @@ void Manager::Update() {
         default: {
             auto pose = MetaCore::Input::GetHeadPose();
             float smoothing = getConfig().Smoothing.GetValue();
-            if (smoothing >= 0.1) {
+            if (smoothing >= 0.01) {
                 float deltaTime = UnityEngine::Time::get_deltaTime() * 2 / smoothing;
-                smoothPosition = EaseLerp(smoothPosition, pose.position, UnityEngine::Time::get_time(), deltaTime);
                 smoothRotation = Slerp(smoothRotation, pose.rotation, deltaTime);
+                smoothPosition = EaseLerp(smoothPosition, pose.position, UnityEngine::Time::get_time(), deltaTime);
             } else {
-                smoothPosition = pose.position;
                 smoothRotation = pose.rotation;
+                smoothPosition = pose.position;
             }
-            cameraStream->transform->SetPositionAndRotation(smoothPosition, ApplyTilt(smoothRotation, getConfig().Tilt.GetValue()));
+            auto rotation = smoothRotation * rotationOffset;
+            cameraStream->transform->SetPositionAndRotation(smoothPosition + rotation * positionOffset, rotation);
             break;
         }
     }
@@ -272,7 +268,7 @@ static void HandleVideoSettings(VideoSettings const& settings, void* source) {
     config.Bitrate.SetValue(settings.bitrate(), false);
     config.Save();
     Manager::UpdateVideoSettings(source);
-    Config::UpdateMenu();
+    UpdateSettings();
 }
 
 static void HandleAudioSettings(AudioSettings const& settings, void* source) {
@@ -284,7 +280,7 @@ static void HandleAudioSettings(AudioSettings const& settings, void* source) {
     config.MixMode.SetValue(settings.micmix(), false);
     config.Save();
     Manager::UpdateAudioSettings(source);
-    Config::UpdateMenu();
+    UpdateSettings();
 }
 
 static void HandleCameraSettings(CameraSettings const& settings, void* source) {
@@ -295,8 +291,11 @@ static void HandleCameraSettings(CameraSettings const& settings, void* source) {
     config.CameraPos.SetValue({pos.x(), pos.y(), pos.z()}, false);
     auto const& rot = position.rotation();
     config.CameraRot.SetValue({rot.x(), rot.y(), rot.z()}, false);
+    auto const& offset = position.offset();
+    config.SmoothCameraPos.SetValue({offset.x(), offset.y(), offset.z()}, false);
+    auto const& rotOffset = position.rotationoffset();
+    config.SmoothCameraRot.SetValue({rotOffset.x(), rotOffset.y(), rotOffset.z()}, false);
     config.Smoothing.SetValue(position.smoothness(), false);
-    config.Tilt.SetValue(position.tilt(), false);
     auto const& visibility = settings.visibility();
     config.NoteVisibility.SetValue(visibility.notes(), false);
     config.WallVisibility.SetValue(visibility.walls(), false);
@@ -308,7 +307,7 @@ static void HandleCameraSettings(CameraSettings const& settings, void* source) {
     config.Orthographic.SetValue(settings.orthographic(), false);
     config.Save();
     Manager::UpdateCameraSettings(source);
-    Config::UpdateMenu();
+    UpdateSettings();
 }
 
 static void HandleInput(Input const& input) {
@@ -389,6 +388,17 @@ void Manager::UpdateCameraSettings(void* source) {
     rot.set_x(rotVec.x);
     rot.set_y(rotVec.y);
     rot.set_z(rotVec.z);
+    auto& offset = *position.mutable_offset();
+    auto smoothPosVec = config.SmoothCameraPos.GetValue();
+    offset.set_x(smoothPosVec.x);
+    offset.set_y(smoothPosVec.y);
+    offset.set_z(smoothPosVec.z);
+    auto& rotOffset = *position.mutable_rotationoffset();
+    auto smoothRotVec = config.SmoothCameraRot.GetValue();
+    rotOffset.set_x(smoothRotVec.x);
+    rotOffset.set_y(smoothRotVec.y);
+    rotOffset.set_z(smoothRotVec.z);
+    position.set_smoothness(config.Smoothing.GetValue());
     auto& visibility = *settings.mutable_visibility();
     visibility.set_notes((CameraSettings::Visibility::ShowMode) config.NoteVisibility.GetValue());
     visibility.set_walls((CameraSettings::Visibility::ShowMode) config.WallVisibility.GetValue());
