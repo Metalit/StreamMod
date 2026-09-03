@@ -104,7 +104,7 @@ static float GetLoudness(ArrayW<float> data) {
 }
 
 void MicCapture::Init() {
-    if (deviceId != -1)
+    if (Enabled())
         return;
 
     auto devices = GetDevices();
@@ -140,7 +140,7 @@ void MicCapture::Init() {
 }
 
 void MicCapture::Stop() {
-    if (deviceId == -1)
+    if (!Enabled())
         return;
 
     logger.info("ending recording of microphone {}", deviceId);
@@ -156,7 +156,7 @@ void MicCapture::Stop() {
 }
 
 void MicCapture::Update() {
-    if (deviceId == -1)
+    if (!Enabled())
         return;
 
     int position = GetRecordPosition(deviceId);

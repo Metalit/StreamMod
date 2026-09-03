@@ -31,3 +31,13 @@ DECLARE_CLASS_CODEGEN(StreamMod, AudioCapture, UnityEngine::MonoBehaviour) {
     Hollywood::SimpleLimiter limiter;
     bool initedLimiter = false;
 };
+
+// stolen from obs
+constexpr uint64_t util_mul_div64(uint64_t num, uint64_t mul, uint64_t div) {
+    uint64_t const rem = num % div;
+    return (num / div) * mul + (rem * mul) / div;
+}
+
+constexpr uint64_t AudioTimeIncrease(size_t samples, int sampleRate, int channels) {
+    return util_mul_div64(samples / channels, 1000000000, sampleRate);
+}

@@ -30,4 +30,8 @@ DECLARE_CLASS_CODEGEN(StreamMod, MicCapture, UnityEngine::MonoBehaviour) {
 
    public:
     static MicCapture* Create(std::function<void(ArrayW<float>)> callback);
+
+    bool Enabled() {
+        return deviceId != -1;
+    }
 };

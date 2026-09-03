@@ -26,6 +26,7 @@
 static bool initialized = false;
 static int sampleRate = -1;
 static int channels = -1;
+static uint64_t audioTime = 0;
 
 static Hollywood::CameraCapture* cameraStream = nullptr;
 static StreamMod::AudioCapture* audioStream = nullptr;
@@ -36,10 +37,6 @@ static UnityEngine::Vector3 smoothPosition;
 static UnityEngine::Quaternion smoothRotation;
 static UnityEngine::Vector3 positionOffset;
 static UnityEngine::Quaternion rotationOffset;
-
-static inline uint64_t Time() {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
 
 static int ApplyEnumMask(int mask, int value, int layer, int extra) {
     switch (value) {
@@ -75,11 +72,15 @@ static void CheckUpdateAudioConfig(int inSampleRate, int inChannels) {
 }
 
 static void SendAudioFrame(std::span<float> samples) {
+    if (!audioTime)
+        audioTime = Time();
     PacketWrapper packet;
     auto& audio = *packet.mutable_audioframe();
-    audio.set_time(Time());
+    audio.set_time(audioTime);
     *audio.mutable_data() = {samples.begin(), samples.end()};
     Socket::Send(packet);
+    // What happens if we miss audio? Can we avoid it happening?
+    audioTime += AudioTimeIncrease(samples.size(), sampleRate, channels);
 }
 
 static void UpdateCamera();
@@ -152,6 +153,7 @@ static void StopAudio() {
     audioStream->OnDestroy();
     UnityEngine::Object::DestroyImmediate(audioStream);
     audioStream = nullptr;
+    audioTime = 0;
 }
 
 static void RefreshAudio() {
@@ -248,6 +250,7 @@ void Manager::Invalidate() {
     if (audioStream)
         UnityEngine::Object::DestroyImmediate(audioStream);
     audioStream = nullptr;
+    audioTime = 0;
     waiting = capturing;
     capturing = false;
 }

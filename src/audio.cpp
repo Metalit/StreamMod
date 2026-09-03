@@ -42,8 +42,10 @@ void AudioCapture::SetMicCapture(bool enabled) {
             });
         }
         mic->Init();
-    } else if (mic)
+    } else if (mic) {
         mic->Stop();
+        micBuffer.clear();
+    }
 }
 
 void AudioCapture::OnAudioFilterRead(ArrayW<float> data, int audioChannels) {
@@ -58,18 +60,18 @@ void AudioCapture::Update() {
         sampleRate = UnityEngine::AudioSettings::get_outputSampleRate();
     if (channels == -1 || sampleRate == -1)
         return;
-    if (!initedLimiter)
+    if (!initedLimiter) {
         limiter.init(channels, sampleRate);
+        initedLimiter = true;
+    }
 
     std::unique_lock lock(mutex);
 
-    if (!mic || micBuffer.empty()) {
-        if (!gameBuffer.empty()) {
-            for (auto& data : gameBuffer)
-                data = limiter.process(data);
-            callback(gameBuffer, sampleRate, channels);
-            gameBuffer.clear();
-        }
+    if (!mic || !mic->Enabled()) {
+        for (float data : gameBuffer)
+            data = limiter.process(data);
+        callback(gameBuffer, sampleRate, channels);
+        gameBuffer.clear();
         return;
     }
 
